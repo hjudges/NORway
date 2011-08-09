@@ -1,0 +1,9 @@
+NORway - Teensy++ 2.0 NOR flasher for PS3 (judges@eEcho.com)
+------------------------------------------------------------
+
+v0.1 - Initial release
+v0.2 - 3.3V voltage regulator required!
+       Changed clock speed to 8MHz
+v0.3 - Speed optimizations
+       Dumping now only takes 45 secs instead of over 5 mins!
+       Writing now only takes about 8.5 mins instead of over 2 hours!
