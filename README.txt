@@ -1,4 +1,4 @@
-NORway v0.3
+NORway v0.4
 
 This project has been ported for the Teensy++ 2.0 from the original NOR flasher tool
 ("noralizer" by Hector Martin "marcan" <hector@marcansoft.com>) that was used to flash
@@ -14,6 +14,8 @@ Contents:
 	\norpatch.exe			- Small tool to verify content of NOR dump (recognizes any OFW),
 					  replace ros0/ros1 with new core os (.NET 2.0 required)
 	\NORway.py			- PC Python client
+	\changes.txt			- Version history
+	\perf-test.txt			- Performance tests for the different writing modes
 	\README.txt			- This file
 
 Hardware connections (see "\hwinstall\nor_testpoints.png" + "\hwinstall\teensy.jpg"):
@@ -65,21 +67,31 @@ Usage:
 	  NORway.py <your com port> release
 	- Power off your PS3 (disconnect Teensy if PS3 doesn't boot when restarted)
 
-	Dumping takes 45 seconds. A file "flash.bin" with a size of exactly 16 MB (16.777.216 bytes)
+	Dumping takes about 1 minute. A file "flash.bin" with a size of exactly 16 MB (16.777.216 bytes)
 	has been created in your current directory.
 	
-	Writing a complete flash using the "write" command takes about 8.5 minutes.
+	Writing a complete flash using the "write" command takes about 7 minutes.
 
 	IMPORTANT:
 	Before you flash your PS3 with anything new, make sure that the content of your dump is correct
 	(use the supplied tool "norpatch.exe", it's able to recognize any OFW core os).
 	And keep your original dump in a safe place. You might need it.
 
+	Support thread:
+	http://www.ps3hax.net/showthread.php?t=25408
+
+	More information available at (thanks to eussNL and all contributors for maintaining this great wiki!):
+	http://ps3devwiki.com/wiki/Teensy_2.0%2B%2B
+	http://ps3devwiki.com/wiki/Hardware_flashing
 
 It's tested on Win7 x86/x64, but should also work just fine on any other x86/x64 Windows >=XP. Basically
 it should also work on Linux, but I didn't test. If you're running Linux, you probably know what to do. ;-)
 Serial drivers are not required for Linux.
 
 Thanks to "marcan" for the original implementation.
+Thanks to "CrackMyDay" for code optimizations and his Samsung tutorial!
+	check this out if you run into troubles:
+	http://www.ps3hax.net/showthread.php?p=284070#post284070
+Thanks to everyone else for contributing and beta testing!
 
  -- judges (judges@eEcho.com)

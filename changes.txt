@@ -1,9 +1,60 @@
 NORway - Teensy++ 2.0 NOR flasher for PS3 (judges@eEcho.com)
 ------------------------------------------------------------
 
-v0.1 - Initial release
-v0.2 - 3.3V voltage regulator required!
-       Changed clock speed to 8MHz
-v0.3 - Speed optimizations
-       Dumping now only takes 45 secs instead of over 5 mins!
-       Writing now only takes about 8.5 mins instead of over 2 hours!
+v0.1
+----
++ Initial release
+
+v0.2
+----
++ 3.3V voltage regulator required!
++ Changed clock speed to 8MHz
+
+v0.3
+----
++ Speed optimizations
+
+	Dumping now only takes 45 secs instead of over 5 mins!
+	Writing now only takes about 8.5 mins instead of over 2 hours!
+
+v0.4
+----
++ Bugfix: RY/BY signal was not always detected correctly
++ Added programming support for Samsung and Macronix
+
+	Currently supported NOR types:
+	Spansion S29GL128N
+	Spansion S29GL128P
+	Samsung K8P2716UZC
+	Samsung K8Q2815UQB
+	Macronix MX29GL128E
+
++ Added manufacturer and chip type autoselect
++ Added sector protection recognition (not supported for Samsung K8Q2815UQB)
++ Added "bootloader" command to NORway.py (enters Teensy's bootloader mode)
++ Added "erasechip" command to NORway.py
+
+	NORway.py COMx erasechip
+
+	Erases the entire NOR (takes 1-3 minutes)
+
++ Added two new programming modes
+
+	NORway.py COMx writeword dump.bin
+
+		Requires manual chip/sector erase before.
+
+		Programs the NOR in word programming mode. It's a four-bus-cycle
+		operation (per word), i.e. it's the slowest, but most compatible
+		programming mode. A full write takes about 9 minutes. Supported by
+		all NOR types. Use this as a last resort if nothing else works.
+
+	NORway.py COMx writewordubm dump.bin
+
+		Requires manual chip/sector erase before.
+
+		Programs the NOR in unlock bypass mode (word programming). It's a
+		two-bus-cycle operation (per word), i.e. it's slower than write
+		buffer programming (command "write"), but faster than standard word
+		programming mode (see above). A full write takes about 9 minutes.
+		Supported by all NOR types. Use this if "write" command doesn't work.

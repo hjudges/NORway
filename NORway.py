@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # *************************************************************************
-#  NORway.py v0.3
+#  NORway.py v0.4
 #
 # Teensy++ 2.0 modifications by judges@eEcho.com
 # *************************************************************************
@@ -21,7 +21,7 @@ class TeensySerial(object):
 	BUFSIZE = 32768
 
 	def __init__(self, port):
-		self.ser = serial.Serial(port, 9600, timeout=5, rtscts=0, dsrdtr=1, xonxoff=0)
+		self.ser = serial.Serial(port, 9600, timeout=300, rtscts=0, dsrdtr=1, xonxoff=0, writeTimeout=120)
 		if self.ser is None:
 			raise TeensySerialError("could not open serial %s")%port
 		self.ser.setDTR()
@@ -54,7 +54,6 @@ class TeensySerial(object):
 class NORError(Exception):
 	pass
 
-STATUS_DRIVE = 0x40
 STATUS_TRIST_N = 0x20
 STATUS_RESET_N = 0x10
 STATUS_READY = 0x08
@@ -63,6 +62,11 @@ STATUS_WE_N = 0x02
 STATUS_OE_N = 0x01
 
 class NORFlasher(TeensySerial):
+	MF_ID = 0
+	DEVICE_ID = 0
+	DEVICE_PROTECTED = 0
+	RETRY_COUNT = 20
+
 	def __init__(self, port):
 		TeensySerial.__init__(self, port)
 
@@ -80,21 +84,140 @@ class NORFlasher(TeensySerial):
 		self.write(0x01)
 		return self.readbyte()
 
+	def manufacturer_id(self):
+		self.writeat(0x555, 0xaa)
+		self.writeat(0x2aa, 0x55)
+		self.writeat(0x555, 0x90)
+		self.addr(0x0)
+		self.delay(10)
+		self.write("\x14")
+		self.readbyte()
+		val = self.readbyte()
+		self.reset = 1
+		self.udelay(40)
+		self.reset = 0
+		self.udelay(40)
+		self.ping()
+		return val
+
+	def device_id(self):
+		self.writeat(0x555, 0xaa)
+		self.writeat(0x2aa, 0x55)
+		self.writeat(0x555, 0x90)
+
+		self.addr(0x1)
+		self.delay(10)
+		self.write("\x14")
+		self.readbyte()
+		val = self.readbyte()
+
+		self.addr(0x0e)
+		self.delay(10)
+		self.write("\x14")
+		self.readbyte()
+		val = (val << 8) | self.readbyte()
+
+		self.addr(0x0f)
+		self.delay(10)
+		self.write("\x14")
+		self.readbyte()
+		val = (val << 8) | self.readbyte()
+
+		self.reset = 1
+		self.udelay(40)
+		self.reset = 0
+		self.udelay(40)
+		self.ping()
+		return val
+
+	def checkprotection(self):
+		self.writeat(0x555, 0xaa)
+		self.writeat(0x2aa, 0x55)
+		self.writeat(0x555, 0xc0)
+
+		print
+		print "Checking sector protection..."
+		for offset in range(0, 0x800000, 0x10000):
+			self.addr(offset)
+			self.delay(10)
+			self.write("\x14")
+			self.readbyte()
+			val = self.readbyte()
+			if ((val & 1) == 0):
+				print "Sector at 0x%06x is protected!"%offset
+				self.DEVICE_PROTECTED = 1
+
+		if (self.DEVICE_PROTECTED == 0):
+			print "No protected sectors found!"
+
+		self.writeat(0x0, 0x90)
+		self.writeat(0x0, 0x0)
+		self.delay(10)
+
+		self.reset = 1
+		self.udelay(40)
+		self.reset = 0
+		self.udelay(40)
+		self.ping()
+
+	def checkchip(self):
+		if (self.MF_ID == 0):
+			print
+			print "Unknown chip manufacturer! Exiting..."
+			sys.exit(1)
+		if (self.DEVICE_ID == 0):
+			print
+			print "Unknown device id! Exiting..."
+			sys.exit(1)
+		if (self.DEVICE_PROTECTED == 1):
+			print
+			print "Device has protected sectors! Command not supported! Exiting..."
+			sys.exit(1)
+
 	def printstate(self):
 		state = self.state()
-		print "{0:15} {1}".format("STATUS_DRIVE:", bool(state & STATUS_DRIVE))
+		self.MF_ID = self.manufacturer_id()
+		self.DEVICE_ID = self.device_id()
+
+		if self.MF_ID == 0x01:
+			print "NOR chip manufacturer: Spansion (0x%02x)"%self.MF_ID
+			if self.DEVICE_ID == 0x7e2101:
+				print "NOR chip type: S29GL128 (0x%06x)"%self.DEVICE_ID
+			else:
+				print "NOR chip type: unknown (0x%06x)"%self.DEVICE_ID
+				self.DEVICE_ID = 0
+		elif self.MF_ID == 0xEC:
+			print "NOR chip manufacturer: Samsung (0x%02x)"%self.MF_ID
+			if self.DEVICE_ID == 0x7e6660:
+				print "NOR chip type: K8P2716UZC (0x%06x)"%self.DEVICE_ID
+			elif self.DEVICE_ID == 0x7e0601:
+				print "NOR chip type: K8Q2815UQB (0x%06x)"%self.DEVICE_ID
+			else:
+				print "NOR chip type: unknown (0x%06x)"%self.DEVICE_ID
+				self.DEVICE_ID = 0
+		elif self.MF_ID == 0xC2:
+			print "NOR chip manufacturer: Macronix (0x%02x)"%self.MF_ID
+			if self.DEVICE_ID == 0x7e2101:
+				print "NOR chip type: MX29GL128 (0x%06x)"%self.DEVICE_ID
+			else:
+				print "NOR chip type: unknown (0x%06x)"%self.DEVICE_ID
+				self.DEVICE_ID = 0
+		else:
+			print "NOR chip manufacturer: unknown (0x%02x)"%self.MF_ID
+			print "NOR chip type: unknown (0x%06x)"%self.DEVICE_ID
+			self.MF_ID = 0
+			self.DEVICE_ID = 0
+		
+		if (self.MF_ID != 0xEC) and (self.MF_ID != 0x0) and (self.DEVICE_ID != 0x7e0601) and (self.DEVICE_ID != 0):
+			self.checkprotection()
+
+		print
 		print "{0:15} {1}".format("STATUS_TRIST_N:", bool(state & STATUS_TRIST_N))
 		print "{0:15} {1}".format("STATUS_RESET_N:", bool(state & STATUS_RESET_N))
 		print "{0:15} {1}".format("STATUS_READY:", bool(state & STATUS_READY))
 		print "{0:15} {1}".format("STATUS_CE_N:", bool(state & STATUS_CE_N))
 		print "{0:15} {1}".format("STATUS_WE_N:", bool(state & STATUS_WE_N))
 		print "{0:15} {1}".format("STATUS_OE_N:", bool(state & STATUS_OE_N))
-
-	def _s_drive(self, v):
-		self.write(0x04 | bool(v))
-	def _g_drive(self):
-		return bool(self.state() & STATUS_DRIVE)
-	drive = property(_g_drive, _s_drive)
 
 	def _s_trist(self, v):
 		self.write(0x06 | bool(v))
@@ -122,25 +245,62 @@ class NORFlasher(TeensySerial):
 		self.addr(addr)
 		self.writeword(data, inc)
 
-	def readsector(self, off):
-		BLOCK = 0x10000
-		assert (off & (BLOCK-1)) == 0
+	def bootloader(self):
+		self.write("\x04")
+		self.flush()
+
+	def readsector(self, off, blocksize=0x20000):
+		assert (off & (blocksize/2-1)) == 0
 		self.addr(off)
-		self.write("\x13")
-		d = self.read(2*BLOCK)
+
+		if (blocksize == 0x1000):
+			self.write("\x10")
+		elif (blocksize == 0x2000):
+			self.write("\x11")
+		elif (blocksize == 0x10000):
+			self.write("\x12")
+		elif (blocksize == 0x20000):
+			self.write("\x13")
+
+		d = self.read(blocksize)
 		return d
 
 	def erasesector(self, off):
-		assert off&0xFFFF == 0
+		offset_2nddie = 0
+		if (self.MF_ID == 0xEC) and (self.DEVICE_ID == 0x7e0601):
+			offset_2nddie = off & 0x400000
+
+		self.writeat(0x555 + offset_2nddie, 0xaa)
+		self.writeat(0x2aa + offset_2nddie, 0x55)
+		self.writeat(0x555 + offset_2nddie, 0x80)
+		self.writeat(0x555 + offset_2nddie, 0xaa)
+		self.writeat(0x2aa + offset_2nddie, 0x55)
+		self.writeat(off, 0x30)
+		self.delay(10)
+		self.wait()
+		self.ping()
+
+	def erasechip(self):
 		self.writeat(0x555, 0xaa)
 		self.writeat(0x2aa, 0x55)
 		self.writeat(0x555, 0x80)
 		self.writeat(0x555, 0xaa)
 		self.writeat(0x2aa, 0x55)
-		self.writeat(off, 0x30)
+		self.writeat(0x555, 0x10)
 		self.delay(10)
 		self.wait()
 		self.ping()
+
+		if (self.MF_ID == 0xEC) and (self.DEVICE_ID == 0x7e0601):
+			self.writeat(0x555+0x400000, 0xaa)
+			self.writeat(0x2aa+0x400000, 0x55)
+			self.writeat(0x555+0x400000, 0x80)
+			self.writeat(0x555+0x400000, 0xaa)
+			self.writeat(0x2aa+0x400000, 0x55)
+			self.writeat(0x555+0x400000, 0x10)
+			self.delay(10)
+			self.wait()
+			self.ping()
 
 	def programline(self, off, data):
 		assert off&0x1f == 0
@@ -158,64 +318,191 @@ class NORFlasher(TeensySerial):
 		self.writeat(saddr, 0x29)
 		self.wait()
 
-	def writesector(self, addr, data):
+	def programword(self, off, data):
+		if isinstance(data, str):
+			data = struct.unpack(">%dH"%(len(data)/2), data)
+		assert len(data) <= 2
+
+		offset_2nddie = 0
+		if (self.MF_ID == 0xEC) and (self.DEVICE_ID == 0x7e0601):
+			offset_2nddie = addr & 0x400000
+
+		self.writeat(0x555 + offset_2nddie, 0xaa)
+		self.writeat(0x2aa + offset_2nddie, 0x55)
+		self.writeat(0x555 + offset_2nddie, 0xa0)
+		self.wait()
+		self.writeat(off, data[0])
+		self.wait()
+
+	def program(self, addr, data, wordmode=False, ubm=False):
 		assert len(data) == 0x20000
 		assert (addr & 0xffff) == 0
-		odata = self.readsector(addr)
-		if odata == data:
-			return
-		self.erasesector(addr)
-		for off in range(0,0x20000,0x40):
-			d = data[off:off+0x40]
-			if d != "\xff"*0x40:
-				self.programline(addr+(off/2), d)
-		rdata = self.readsector(addr)
-		if rdata != data:
-			raise NORError("Verification failed")
 
-	def rmwsector(self, addr, data):
-		offset = addr & 0x1ffff
-		endaddr = offset + len(data)
-		assert endaddr <= 0x20000
-		secaddr = (addr & ~0x1ffff)/2
-		odata = self.readsector(secaddr)
-		wdata = odata[:offset] + data + odata[endaddr:]
-		if odata != wdata:
-			self.writesector(secaddr, wdata)
+		use2nddie = 0
+		if (self.MF_ID == 0xEC) and (self.DEVICE_ID == 0x7e0601) and (addr & 0x400000):
+			use2nddie = 1
 
-	def writerange(self, addr, data):
+		if (wordmode == True):
+			# 4KB blocks
+			for block in range(0,0x20000,0x1000):
+				odata = self.readsector(addr+(block/2), 0x1000)
+				if (odata == data[block:block+0x1000]):
+					continue
+
+				retries = self.RETRY_COUNT
+				while retries != 0:
+					self.addr(addr+(block/2))
+					self.write(0x1A | use2nddie)
+					self.write(data[block:block+0x1000])
+
+					# read write status byte
+					res = self.readbyte()
+					# 'K' = okay, 'T' = timeout error when writing, 'R' = Teensy receive buffer timeout
+					if (res != 75):
+						self.reset = 1
+						self.udelay(40)
+						self.reset = 0
+						self.udelay(40)
+						self.ping()
+
+					retries -= 1
+
+					rdata = self.readsector(addr+(block/2), 0x1000)
+					if (rdata == data[block:block+0x1000]):
+						break
+					else:
+						print "(%d. Retry)"%(self.RETRY_COUNT-retries)
+
+				if retries == 0:
+					raise NORError("Verification failed")
+		elif (ubm == True):
+			# 4KB blocks
+			for block in range(0,0x20000,0x1000):
+				odata = self.readsector(addr+(block/2), 0x1000)
+				if (odata == data[block:block+0x1000]):
+					continue
+
+				retries = self.RETRY_COUNT
+				while retries != 0:
+					# enter unlock bypass mode
+					self.addr(addr+(block/2))
+					self.write(0x1C | use2nddie)
+					self.write(data[block:block+0x1000])
+
+					# read write status byte
+					res = self.readbyte()
+					# 'K' = okay, 'T' = timeout error when writing, 'R' = Teensy receive buffer timeout
+					if (res != 75):
+						self.reset = 1
+						self.udelay(40)
+						self.reset = 0
+						self.udelay(40)
+						self.ping()
+
+					retries -= 1
+
+					rdata = self.readsector(addr+(block/2), 0x1000)
+					if (rdata == data[block:block+0x1000]):
+						break
+					else:
+						print "(%d. Retry)"%(self.RETRY_COUNT-retries)
+
+				if retries == 0:
+					raise NORError("Verification failed")	
+		else:
+			odata = self.readsector(addr)
+			if odata == data:
+				return
+				
+			if odata != "\xff"*0x20000:
+				self.erasesector(addr)
+
+			# 4KB blocks
+			for block in range(0,0x20000,0x1000):
+				odata = self.readsector(addr+(block/2), 0x1000)
+				if (odata == data[block:block+0x1000]):
+					continue
+
+				retries = self.RETRY_COUNT
+				while retries != 0:
+					self.addr(addr+(block/2))
+					self.write("\x1E")
+					self.write(data[block:block+0x1000])
+
+					# read write status byte
+					res = self.readbyte()
+					# 'K' = okay, 'T' = timeout error when writing, 'R' = Teensy receive buffer timeout
+					if (res != 75):
+						self.reset = 1
+						self.udelay(40)
+						self.reset = 0
+						self.udelay(40)
+						self.ping()
+
+					retries -= 1
+
+					rdata = self.readsector(addr+(block/2), 0x1000)
+					if (rdata == data[block:block+0x1000]):
+						break
+					else:
+						print "(%d. Retry)"%(self.RETRY_COUNT-retries)
+
+				if retries == 0:
+					raise NORError("Verification failed")
+
+	def writerange(self, addr, data, wordmode=False, ubm=False):
 		if len(data) == 0:
 			return
-		first_sector = addr & ~0x1ffff
-		last_sector = (addr + len(data) - 1) & ~0x1ffff
 
-		offset = addr & 0x1ffff
+		datasize = len(data)
+		start = addr
 
-		sec_count = (last_sector + 0x20000 - first_sector)/0x20000
-		done = 0
-		if offset != 0:
-			print "\rSector %06x (%d/%d) [F]..."%(first_sector, done+1, sec_count),
-			sys.stdout.flush()
-			self.rmwsector(addr, data[:0x20000-offset])
-			data = data[0x20000-offset:]
-			done += 1
-			addr += 0x20000-offset
-
+		print "Writing..."
 		while len(data) >= 0x20000:
-			print "\rSector %06x (%d/%d) [M]..."%(addr, done+1, sec_count),
+			print "\r%d KB / %d KB"%((addr-start)/1024, datasize/1024),
 			sys.stdout.flush()
-			self.writesector(addr/2, data[:0x20000])
-			done += 1
+			self.program(addr/2, data[:0x20000], wordmode, ubm)
 			addr += 0x20000
 			data = data[0x20000:]
+		print "\r%d KB / %d KB"%((addr-start)/1024, datasize/1024),
+		sys.stdout.flush()
+		print
 
-		if len(data) != 0:
-			print "\rSector %06x (%d/%d) [L]..."%(addr, done+1, sec_count),
+	def speedtest_read(self):
+		self.write(0x0C)
+		d = self.read(0x20000)
+		return d
+
+	def speedtest_write_data(self, addr, data):
+		assert len(data) == 0x20000
+		assert (addr & 0xffff) == 0
+
+		# 4KB blocks
+		for block in range(0,0x20000,0x1000):
+			self.write(0x0D)
+			self.write(data[block:block+0x1000])
+
+			# read write status byte
+			res = self.readbyte()
+			# 'K' = okay, 'T' = timeout error when writing, 'R' = Teensy receive buffer timeout
+			if (res != 75):
+				print "Error: %c"%res
+
+	def speedtest_write(self, addr, data):
+		if len(data) == 0:
+			return
+
+		datasize = len(data)
+		start = addr
+
+		while len(data) >= 0x20000:
+			print "\r%d KB / %d KB"%((addr-start)/1024, datasize/1024),
 			sys.stdout.flush()
-			self.rmwsector(addr, data)
-			done += 1
-
-		assert done == sec_count
+			self.speedtest_write_data(addr/2, data[:0x20000])
+			addr += 0x20000
+			data = data[0x20000:]
+		print "\r%d KB / %d KB"%((addr-start)/1024, datasize/1024),
+		sys.stdout.flush()
 		print
 
 	def delay(self, v):
@@ -233,26 +520,29 @@ class NORFlasher(TeensySerial):
 		self.delay(v * 60)
 
 if __name__ == "__main__":
+	print "NORway.py v0.4 - Teensy++ 2.0 NOR flasher for PS3 (judges@eEcho.com)"
+	print "(Orignal noralizer.py by Hector Martin \"marcan\" <hector@marcansoft.com>)"
+	print
+
 	if len(sys.argv) == 1:
-		print "NORway.py v0.3 - Teensy++ 2.0 NOR flasher for PS3 (judges@eEcho.com)"
-		print "(Orignal noralizer.py by Hector Martin \"marcan\" <hector@marcansoft.com>)"
-		print
 		print "Usage:"
 		print "%s serialport [command] [filename] [address]"%sys.argv[0]
 		print
 		print "  serialport  Name of serial port to open (eg. COM1, COM2, /dev/ttyACM0, etc)"
-		print "  command     dump       Reads entire NOR to [filename]"
-		print "              erase      Erases one sector (128KB) at [address]"
-		print "              write      Flashes (read-erase-modify-write-verify) [filename]"
-		print "                         at [address] to NOR"
-		print "              writeimg   Same as write, but prepend a 16-byte length header"
-		print "                         [address] is required"
-		print "              program    Flashes (erase-write-verify) [filename]"
-		print "                         at [address] to NOR"
-		print "              release    Releases NOR interface, so the PS3 can boot"
-		print "  filename    Filename for [dump|write|writeimg|program]"
-		print "  address     Address for [erase|write|writeimg|program]"
-		print "              Default is 0x0, address must be aligned (multiple of 0x20000)"
+		print "  command  dump          Reads entire NOR to [filename]"
+		print "           erase         Erases one sector (128KB) at [address]"
+		print "           erasechip     Erases entire NOR"
+		print "           write         Flashes (read-erase-modify-write-verify) [filename]"
+		print "                         at [address] to NOR (buffered programming mode)"
+		print "           writeword     Flashes (write-verify) [filename]"
+		print "                         at [address] to NOR (word programming mode)"
+		print "           writewordubm  Flashes (write-verify) [filename]"
+		print "                         at [address] to NOR (word prgrmming/unlock bypass mode)"
+		print "           release       Releases NOR interface, so the PS3 can boot"
+		print "           bootloader    Enters Teensy's bootloader mode"
+		print "  filename Filename for [dump|write|writeword|writewordubm]"
+		print "  address  Address for [erase|write|writeword|writewordubm]"
+		print "           Default is 0x0, address must be aligned (multiple of 0x20000)"
 		print
 		print "Examples:"
 		print "  %s COM1"%sys.argv[0]
@@ -260,8 +550,8 @@ if __name__ == "__main__":
 		print "  %s COM1 erase 0x20000"%sys.argv[0]
 		print "  %s COM1 write d:\myflash.bin"%sys.argv[0]
 		print "  %s COM1 write d:\myflash.bin 0xA0000"%sys.argv[0]
-		print "  %s COM1 program d:\myflash.bin"%sys.argv[0]
-		print "  %s COM1 program d:\myflash.bin 0x40000"%sys.argv[0]
+		print "  %s COM1 writeword d:\myflash.bin"%sys.argv[0]
+		print "  %s COM1 writewordubm d:\myflash.bin 0x40000"%sys.argv[0]
 		print "  %s COM1 release"%sys.argv[0]
 		sys.exit(0)
 	
@@ -269,13 +559,11 @@ if __name__ == "__main__":
 	print "Pinging..."
 	n.ping()
 
-	n.drive = 0
 	n.reset = 0
 	print "Set SB to tristate"
 	print
 	n.trist = 1
 	n.printstate()
-	n.drive = 1
 	print
 	print "Resetting NOR..."
 	n.reset = 1
@@ -293,77 +581,86 @@ if __name__ == "__main__":
 		fo = open(sys.argv[3],"wb")
 		for offset in range(0, 0x800000, BLOCK):
 			fo.write(n.readsector(offset))
-			print "\r%d KB"%((offset+BLOCK)/512),
+			print "\r%d KB / 16384 KB"%((offset+BLOCK)/512),
 			sys.stdout.flush()
 		print
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
 	elif len(sys.argv) == 4 and sys.argv[2] == "erase":
+		n.checkchip()
 		print
 		addr = int(sys.argv[3], 16)
-		if addr & 0x1ffff:
-			print "Address must be aligned!"
+		if addr & 0x1:
+			print "Address must be even!"
 			sys.exit(1)
-		assert addr&1 == 0
-		print "Erasing sector %06x..."%addr,
+		print "Erasing sector/block at address %06x..."%addr,
 		sys.stdout.flush()
 		n.erasesector(addr/2)
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
+	elif len(sys.argv) == 3 and sys.argv[2] == "erasechip":
+		n.checkchip()
+		print
+		print "Erasing chip, might take a while... (1-3 minutes)"
+		n.erasechip()
+		print
+		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
 	elif len(sys.argv) in (4,5) and sys.argv[2] == "write":
+		n.checkchip()
 		print
+		if (n.MF_ID == 0xEC) and (n.DEVICE_ID == 0x7e0601):
+			print "Command not supported for Samsung K8Q2815UQB"
+			sys.exit(1)
 		data = open(sys.argv[3],"rb").read()
 		addr = 0
 		if len(sys.argv) == 5:
 			addr = int(sys.argv[4],16)
 		n.writerange(addr, data)
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
-	elif len(sys.argv) == 5 and sys.argv[2] == "writeimg":
+	elif len(sys.argv) == 4 and sys.argv[2] == "speedtest_read":
+		BLOCK = 0x10000
 		print
-		data = open(sys.argv[3],"rb").read()
-		addr = int(sys.argv[4],16)
-		data = struct.pack(">12xI", len(data)) + data
-		n.writerange(addr, data)
+		print "Measuring read performance..."
+		fo = open(sys.argv[3],"wb")
+		for offset in range(0, 0x800000, BLOCK):
+			fo.write(n.speedtest_read())
+			print "\r%d KB / 16384 KB"%((offset+BLOCK)/512),
+			sys.stdout.flush()
+		print
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
-	elif len(sys.argv) in (4,5) and sys.argv[2] == "program":
+	elif len(sys.argv) in (4,5) and sys.argv[2] == "speedtest_write":
+		print
+		print "Measuring write performance..."
+		data = open(sys.argv[3],"rb").read()
+		addr = 0
+		if len(sys.argv) == 5:
+			addr = int(sys.argv[4],16)
+		n.speedtest_write(addr, data)
+		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
+	elif len(sys.argv) in (4,5) and sys.argv[2] == "writeword":
+		n.checkchip()
 		print
 		data = open(sys.argv[3],"rb").read()
 		addr = 0
 		if len(sys.argv) == 5:
 			addr = int(sys.argv[4],16)
-			if addr & 0x1ffff:
-				print "Address must be aligned!"
-				sys.exit(1)
-			addr /= 2
-		sectors = (len(data)+0x1ffff) / 0x20000
-		if (sectors*0x20000) != len(data):
-			left = len(data)%0x20000
-			print "NOTE: padding file with 0x%x FF bytes to complete the sector"%(0x20000 - left)
-		if len(data) & 1: # pad to 16 bits
-			data += "\xff"
-
-		for sec in range(sectors):
-			secaddr = addr + sec * 0x10000
-			print "\rSector %06x (%d/%d) E"%(secaddr, sec+1, sectors),
-			sys.stdout.flush()
-			n.erasesector(secaddr)
-
-			print "\rSector %06x (%d/%d) P"%(secaddr, sec+1, sectors),
-			sys.stdout.flush()
-			d = data[sec*0x20000:sec*0x20000+0x20000]
-			for off in range(0,len(d),0x40):
-				n.programline(secaddr+(off/2), d[off:off+0x40])
-			print "\rSector %06x (%d/%d) V"%(secaddr, sec+1, sectors),
-			sys.stdout.flush()
-			dv = n.readsector(secaddr)[:len(d)]
-			if d != dv:
-				print
-				print "Verification failed!"
-				sys.exit(1)
+		n.writerange(addr, data, True)
+		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
+	elif len(sys.argv) in (4,5) and sys.argv[2] == "writewordubm":
+		n.checkchip()
 		print
+		data = open(sys.argv[3],"rb").read()
+		addr = 0
+		if len(sys.argv) == 5:
+			addr = int(sys.argv[4],16)
+		n.writerange(addr, data, False, True)
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
 	elif len(sys.argv) == 3 and sys.argv[2] == "release":
 		print
-		n.drive = 0
 		n.trist = 0
 		print "NOR Released"
+	elif len(sys.argv) == 3 and sys.argv[2] == "bootloader":
+		print
+		print "Entering Teensy's bootloader mode... Goodbye!"
+		n.bootloader()
+		sys.exit(0)
 
 	n.ping()

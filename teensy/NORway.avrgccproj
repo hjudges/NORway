@@ -42,7 +42,7 @@
   <avrgcc.compiler.optimization.AllocateBytesNeededForEnum>True</avrgcc.compiler.optimization.AllocateBytesNeededForEnum>
   <avrgcc.compiler.warnings.AllWarnings>True</avrgcc.compiler.warnings.AllWarnings>
   <avrgcc.compiler.miscellaneous.OtherFlags>-gdwarf-2 -std=gnu99 </avrgcc.compiler.miscellaneous.OtherFlags>
-  <avrgcc.assembler.general.AssemblerFlags>-Wall -gdwarf-2 -std=gnu99 -DF_CPU=16000000UL -Os -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums</avrgcc.assembler.general.AssemblerFlags>
+  <avrgcc.assembler.general.AssemblerFlags>-Wall -gdwarf-2 -std=gnu99 -DF_CPU=8000000UL -Os -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums</avrgcc.assembler.general.AssemblerFlags>
 </AvrGcc>
     </ToolchainSettings>
     <GenerateHexFile>True</GenerateHexFile>
