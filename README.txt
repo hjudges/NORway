@@ -41,8 +41,6 @@ Hardware connections (see "\hwinstall\nor_testpoints.png" + "\hwinstall\teensy.j
 	Connection diagrams for other boards can be found at:
 	http://ps3devwiki.com/index.php?title=Hardware_flashing
 
-	Currently only Spansion NOR flash memory is supported!
-
 Prerequisites for Windows:
 	Python 2.7.2 (http://www.python.org/ftp/python/2.7.2/python-2.7.2.msi)
 	pyserial 2.5 (http://pypi.python.org/packages/any/p/pyserial/pyserial-2.5.win32.exe)
