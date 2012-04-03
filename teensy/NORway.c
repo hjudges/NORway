@@ -6,7 +6,7 @@ Copyright (C) 2010-2011  Hector Martin "marcan" <hector@marcansoft.com>
 This code is licensed to you under the terms of the GNU GPL, version 2;
 see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 *************************************************************************
- NORway.c (v0.4) - Teensy++ 2.0 port by judges@eEcho.com
+ NORway.c (v0.5 beta) - Teensy++ 2.0 port by judges@eEcho.com
 *************************************************************************/
 
 #include <avr/io.h>
@@ -232,6 +232,27 @@ void speedtest_send()
 	}
 }
 
+void initports()
+{
+	DATA1_DDR = DATA2_DDR = 0xFF;	// set for output
+	ADDR1_DDR = ADDR2_DDR = ADDR3_DDR = 0xFF; //address ports are always output
+	ADDR1_PORT = ADDR2_PORT = ADDR3_PORT = 0;
+	
+	CONT_DDR = 0xFF; //all control ports are always output
+
+	CONT_DDR &= ~(1<<CONT_RYBY); //except RY/BY# (input)
+	CONT_PORT |= (1<<CONT_RYBY); //enable pull up
+	
+	CONT_PORT &= ~((1<<CONT_TRI) | (1<<CONT_CE)); //LOW
+	CONT_PORT |= ((1<<CONT_WE) | (1<<CONT_OE) | (1<<CONT_RESET)); //HIGH
+}
+
+void releaseports()
+{
+	ADDR1_DDR = ADDR2_DDR = ADDR3_DDR = DATA1_DDR = DATA2_DDR = CONT_DDR = 0; //all ports are always input
+	ADDR1_PORT = ADDR2_PORT = ADDR3_PORT = DATA1_PORT = DATA2_PORT = CONT_PORT = 0; //disable pull ups for all ports
+}
+
 int main(void)
 {
 	int16_t in_data;
@@ -262,17 +283,7 @@ int main(void)
 	
 	ADDR1 = ADDR2 = ADDR3 = 0;
 
-	DATA1_DDR = DATA2_DDR = 0xFF;	// set for output
-	ADDR1_DDR = ADDR2_DDR = ADDR3_DDR = 0xFF; //address ports are always output
-	ADDR1_PORT = ADDR2_PORT = ADDR3_PORT = 0;
-	
-	CONT_DDR = 0xFF; //all control ports are always output
-
-	CONT_DDR &= ~(1<<CONT_RYBY); //except RY/BY# (input)
-	CONT_PORT |= (1<<CONT_RYBY); //enable pull up
-	
-	CONT_PORT &= ~((1<<CONT_TRI) | (1<<CONT_CE)); //LOW
-	CONT_PORT |= ((1<<CONT_WE) | (1<<CONT_OE) | (1<<CONT_RESET)); //HIGH
+	releaseports();
 
 	while (1) {
 		// wait for the user to run client app
@@ -322,12 +333,18 @@ int main(void)
 						else
 							CONT_PORT |= (1<<CONT_RESET);
 					}
-					else if (in_data == 12) {		//8'b00001101: SPEEDTEST_READ
-						speedtest_send();
+					else if ((in_data>>1)==6) {		//8'b0000110z: INIT/RELEASE PORTS
+						if (in_data & 1)
+							initports();
+						else
+							releaseports();
 					}
-					else if (in_data == 13) {		//8'b00001100: SPEEDTEST_WRITE
-						speedtest_receive();
-					}
+					//else if (in_data == 12) {		//8'b00001101: SPEEDTEST_READ
+						//speedtest_send();
+					//}
+					//else if (in_data == 13) {		//8'b00001100: SPEEDTEST_WRITE
+						//speedtest_receive();
+					//}
 					else if ((in_data>>1)==7) {		//8'b0000111z: WAIT
 						do_increment = (in_data & 1);
 						state = S_WAITING;

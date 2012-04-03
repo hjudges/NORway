@@ -58,3 +58,8 @@ v0.4
 		buffer programming (command "write"), but faster than standard word
 		programming mode (see above). A full write takes about 9 minutes.
 		Supported by all NOR types. Use this if "write" command doesn't work.
+
+v0.5
+----
++ Bugfix: "NORway.py COMx release" didn't work. Now you can leave Teensy powered at
+  all times and console will boot up correctly after issuing a "release" command

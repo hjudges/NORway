@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # *************************************************************************
-#  NORway.py v0.4
+#  NORway.py v0.5 beta
 #
 # Teensy++ 2.0 modifications by judges@eEcho.com
 # *************************************************************************
@@ -230,6 +230,11 @@ class NORFlasher(TeensySerial):
 	def _g_reset(self):
 		return not (self.state() & STATUS_RESET_N)
 	reset = property(_g_reset, _s_reset)
+
+	# (0x0c | 0)=releaseports
+	# (0x0c | 1)=initports
+	def setports(self, v):
+		self.write(0x0c | bool(v))
 
 	def addr(self, v):
 		assert 0 <= v <= 0x7FFFFF
@@ -520,7 +525,7 @@ class NORFlasher(TeensySerial):
 		self.delay(v * 60)
 
 if __name__ == "__main__":
-	print "NORway.py v0.4 - Teensy++ 2.0 NOR flasher for PS3 (judges@eEcho.com)"
+	print "NORway.py v0.5 beta - Teensy++ 2.0 NOR flasher for PS3 (judges@eEcho.com)"
 	print "(Orignal noralizer.py by Hector Martin \"marcan\" <hector@marcansoft.com>)"
 	print
 
@@ -559,6 +564,7 @@ if __name__ == "__main__":
 	print "Pinging..."
 	n.ping()
 
+	n.setports(1)
 	n.reset = 0
 	print "Set SB to tristate"
 	print
@@ -615,26 +621,26 @@ if __name__ == "__main__":
 			addr = int(sys.argv[4],16)
 		n.writerange(addr, data)
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
-	elif len(sys.argv) == 4 and sys.argv[2] == "speedtest_read":
-		BLOCK = 0x10000
-		print
-		print "Measuring read performance..."
-		fo = open(sys.argv[3],"wb")
-		for offset in range(0, 0x800000, BLOCK):
-			fo.write(n.speedtest_read())
-			print "\r%d KB / 16384 KB"%((offset+BLOCK)/512),
-			sys.stdout.flush()
-		print
-		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
-	elif len(sys.argv) in (4,5) and sys.argv[2] == "speedtest_write":
-		print
-		print "Measuring write performance..."
-		data = open(sys.argv[3],"rb").read()
-		addr = 0
-		if len(sys.argv) == 5:
-			addr = int(sys.argv[4],16)
-		n.speedtest_write(addr, data)
-		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
+	#elif len(sys.argv) == 4 and sys.argv[2] == "speedtest_read":
+	#	BLOCK = 0x10000
+	#	print
+	#	print "Measuring read performance..."
+	#	fo = open(sys.argv[3],"wb")
+	#	for offset in range(0, 0x800000, BLOCK):
+	#		fo.write(n.speedtest_read())
+	#		print "\r%d KB / 16384 KB"%((offset+BLOCK)/512),
+	#		sys.stdout.flush()
+	#	print
+	#	print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
+	#elif len(sys.argv) in (4,5) and sys.argv[2] == "speedtest_write":
+	#	print
+	#	print "Measuring write performance..."
+	#	data = open(sys.argv[3],"rb").read()
+	#	addr = 0
+	#	if len(sys.argv) == 5:
+	#		addr = int(sys.argv[4],16)
+	#	n.speedtest_write(addr, data)
+	#	print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
 	elif len(sys.argv) in (4,5) and sys.argv[2] == "writeword":
 		n.checkchip()
 		print
@@ -656,6 +662,7 @@ if __name__ == "__main__":
 	elif len(sys.argv) == 3 and sys.argv[2] == "release":
 		print
 		n.trist = 0
+		n.setports(0)
 		print "NOR Released"
 	elif len(sys.argv) == 3 and sys.argv[2] == "bootloader":
 		print
