@@ -42,8 +42,8 @@
 
 // You can change these to give your code its own name.  On Windows,
 // these are only used before an INF file (driver install) is loaded.
-#define STR_MANUFACTURER	L"Your Name"
-#define STR_PRODUCT		L"USB Serial"
+#define STR_MANUFACTURER	L"judges"
+#define STR_PRODUCT		L"NORway PS3 Flasher USB Serial"
 
 // All USB serial devices are supposed to have a serial number
 // (according to Microsoft).  On windows, a new COM port is created
@@ -174,7 +174,7 @@ static uint8_t PROGMEM config1_descriptor[CONFIG1_DESC_SIZE] = {
 	1,					// bConfigurationValue
 	0,					// iConfiguration
 	0xC0,					// bmAttributes
-	50,					// bMaxPower
+	250,					// bMaxPower
 	// interface descriptor, USB spec 9.6.5, page 267-269, Table 9-12
 	9,					// bLength
 	4,					// bDescriptorType

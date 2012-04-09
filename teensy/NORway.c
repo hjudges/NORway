@@ -267,6 +267,10 @@ int main(void)
 	// set for 16 MHz clock
 	//CPU_PRESCALE(0);
 
+	//disable JTAG
+	MCUCR = (1<<JTD) | (1<<IVCE) | (0<<PUD);
+	MCUCR = (1<<JTD) | (0<<IVSEL) | (0<<IVCE) | (0<<PUD);
+
 	// Initialize the USB, and then wait for the host to set configuration.
 	// If the Teensy is powered without a PC connected to the USB port,
 	// this will wait forever.

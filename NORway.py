@@ -75,10 +75,10 @@ class NORFlasher(TeensySerial):
 		self.write(0x03)
 		val = self.readbyte()
 		if val != 0x42:
-			raise NORError("Ping failed (expected 42, got %02x)"%val)
+			raise NORError("Ping failed (expected 0x42, got 0x%02x)"%val)
 		val = self.readbyte()
 		if val != 0xbd:
-			raise NORError("Ping failed (expected bd, got %02x)"%val)
+			raise NORError("Ping failed (expected 0xbd, got 0x%02x)"%val)
 
 	def state(self):
 		self.write(0x01)
@@ -340,16 +340,25 @@ class NORFlasher(TeensySerial):
 		self.wait()
 
 	def program(self, addr, data, wordmode=False, ubm=False):
-		assert len(data) == 0x20000
-		assert (addr & 0xffff) == 0
+		ssize = self.getsectorsize(addr*2)
+		assert len(data) == ssize
+		#assert (addr & 0xffff) == 0
+		assert (addr & (ssize/2-1)) == 0
 
 		use2nddie = 0
 		if (self.MF_ID == 0xEC) and (self.DEVICE_ID == 0x7e0601) and (addr & 0x400000):
 			use2nddie = 1
 
 		if (wordmode == True):
+			odata = self.readsector(addr, ssize)
+			if odata == data:
+				return
+				
+			if odata != "\xff"*ssize:
+				self.erasesector(addr)
+
 			# 4KB blocks
-			for block in range(0,0x20000,0x1000):
+			for block in range(0,ssize,0x1000):
 				odata = self.readsector(addr+(block/2), 0x1000)
 				if (odata == data[block:block+0x1000]):
 					continue
@@ -363,7 +372,14 @@ class NORFlasher(TeensySerial):
 					# read write status byte
 					res = self.readbyte()
 					# 'K' = okay, 'T' = timeout error when writing, 'R' = Teensy receive buffer timeout
-					if (res != 75):
+					if (res != 75): #'K'
+						if (res == 84): #'T'
+							print "RY/BY timeout error while writing!"
+						elif (res == 82): #'R'
+							raise NORError("Teensy receive buffer timeout! Disconnect and reconnect Teensy!")
+						else:
+							raise NORError("Received unknown error! (Got 0x%02x)"%val)
+
 						self.reset = 1
 						self.udelay(40)
 						self.reset = 0
@@ -381,8 +397,15 @@ class NORFlasher(TeensySerial):
 				if retries == 0:
 					raise NORError("Verification failed")
 		elif (ubm == True):
+			odata = self.readsector(addr, ssize)
+			if odata == data:
+				return
+				
+			if odata != "\xff"*ssize:
+				self.erasesector(addr)
+
 			# 4KB blocks
-			for block in range(0,0x20000,0x1000):
+			for block in range(0,ssize,0x1000):
 				odata = self.readsector(addr+(block/2), 0x1000)
 				if (odata == data[block:block+0x1000]):
 					continue
@@ -397,7 +420,14 @@ class NORFlasher(TeensySerial):
 					# read write status byte
 					res = self.readbyte()
 					# 'K' = okay, 'T' = timeout error when writing, 'R' = Teensy receive buffer timeout
-					if (res != 75):
+					if (res != 75): #'K'
+						if (res == 84): #'T'
+							print "RY/BY timeout error while writing!"
+						elif (res == 82): #'R'
+							raise NORError("Teensy receive buffer timeout! Disconnect and reconnect Teensy!")
+						else:
+							raise NORError("Received unknown error! (Got 0x%02x)"%val)
+
 						self.reset = 1
 						self.udelay(40)
 						self.reset = 0
@@ -415,15 +445,15 @@ class NORFlasher(TeensySerial):
 				if retries == 0:
 					raise NORError("Verification failed")	
 		else:
-			odata = self.readsector(addr)
+			odata = self.readsector(addr, ssize)
 			if odata == data:
 				return
 				
-			if odata != "\xff"*0x20000:
+			if odata != "\xff"*ssize:
 				self.erasesector(addr)
 
 			# 4KB blocks
-			for block in range(0,0x20000,0x1000):
+			for block in range(0,ssize,0x1000):
 				odata = self.readsector(addr+(block/2), 0x1000)
 				if (odata == data[block:block+0x1000]):
 					continue
@@ -437,7 +467,14 @@ class NORFlasher(TeensySerial):
 					# read write status byte
 					res = self.readbyte()
 					# 'K' = okay, 'T' = timeout error when writing, 'R' = Teensy receive buffer timeout
-					if (res != 75):
+					if (res != 75): #'K'
+						if (res == 84): #'T'
+							print "RY/BY timeout error while writing!"
+						elif (res == 82): #'R'
+							raise NORError("Teensy receive buffer timeout! Disconnect and reconnect Teensy!")
+						else:
+							raise NORError("Received unknown error! (Got 0x%02x)"%val)
+
 						self.reset = 1
 						self.udelay(40)
 						self.reset = 0
@@ -463,15 +500,39 @@ class NORFlasher(TeensySerial):
 		start = addr
 
 		print "Writing..."
-		while len(data) >= 0x20000:
+		ssize = self.getsectorsize(addr)
+		while len(data) >= ssize:
 			print "\r%d KB / %d KB"%((addr-start)/1024, datasize/1024),
 			sys.stdout.flush()
-			self.program(addr/2, data[:0x20000], wordmode, ubm)
-			addr += 0x20000
-			data = data[0x20000:]
+			self.program(addr/2, data[:ssize], wordmode, ubm)
+			addr += ssize
+			data = data[ssize:]
+			ssize = self.getsectorsize(addr)
+			
 		print "\r%d KB / %d KB"%((addr-start)/1024, datasize/1024),
 		sys.stdout.flush()
 		print
+
+	def getsectorsize(self, addr):
+		s8kb = 0x2000
+		s64kb = 0x10000
+		s128kb = 0x20000
+
+		#sector/block sizes for Samsung K8Q2815UQB
+		if (self.MF_ID == 0xEC) and (self.DEVICE_ID == 0x7e0601):
+			if (addr < 0x8000*2):
+				return s8kb
+			elif (addr >= 0x8000*2) and (addr < 0x3f8000*2):
+				return s64kb
+			elif (addr >= 0x3f8000*2) and (addr < 0x408000*2):
+				return s8kb
+			elif (addr >= 0x408000*2) and (addr < 0x7f8000*2):
+				return s64kb
+			else:
+				return s8kb
+		
+		#sector/block size for all other NORs
+		return s128kb
 
 	def speedtest_read(self):
 		self.write(0x0C)
@@ -535,13 +596,13 @@ if __name__ == "__main__":
 		print
 		print "  serialport  Name of serial port to open (eg. COM1, COM2, /dev/ttyACM0, etc)"
 		print "  command  dump          Reads entire NOR to [filename]"
-		print "           erase         Erases one sector (128KB) at [address]"
+		print "           erase         Erases one sector/block (128KB/64KB/8KB) at [address]"
 		print "           erasechip     Erases entire NOR"
 		print "           write         Flashes (read-erase-modify-write-verify) [filename]"
 		print "                         at [address] to NOR (buffered programming mode)"
-		print "           writeword     Flashes (write-verify) [filename]"
+		print "           writeword     Flashes (read-erase-modify-write-verify) [filename]"
 		print "                         at [address] to NOR (word programming mode)"
-		print "           writewordubm  Flashes (write-verify) [filename]"
+		print "           writewordubm  Flashes (read-erase-modify-write-verify) [filename]"
 		print "                         at [address] to NOR (word prgrmming/unlock bypass mode)"
 		print "           release       Releases NOR interface, so the PS3 can boot"
 		print "           bootloader    Enters Teensy's bootloader mode"
