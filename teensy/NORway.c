@@ -292,14 +292,15 @@ int main(void)
 	while (1) {
 		// wait for the user to run client app
 		// which sets DTR to indicate it is ready to receive.
-		while (!(usb_serial_get_control() & USB_SERIAL_DTR)) /* wait */ ;
+		//while (!(usb_serial_get_control() & USB_SERIAL_RTS)) /* wait */ ;
 
 		// discard anything that was received prior.  Sometimes the
 		// operating system or other software will send a modem
 		// "AT command", which can still be buffered.
 		usb_serial_flush_input();
 
-		while (usb_configured() && (usb_serial_get_control() & USB_SERIAL_DTR)) { // is user still connected?
+		//while (usb_configured() && (usb_serial_get_control() & USB_SERIAL_RTS)) { // is user still connected?
+		while (usb_configured()) { // is user still connected?
 			tx_wr = 0;
 			switch (state) {
 			case S_IDLE:
@@ -629,8 +630,9 @@ int main(void)
 				break;
 			}
 				
-			if (tx_wr == 1)
+			if (tx_wr == 1) {
 				usb_serial_putchar(tx_data);
+			}				
 		}		
 	}
 }

@@ -21,10 +21,11 @@ class TeensySerial(object):
 	BUFSIZE = 32768
 
 	def __init__(self, port):
-		self.ser = serial.Serial(port, 9600, timeout=300, rtscts=0, dsrdtr=1, xonxoff=0, writeTimeout=120)
+		self.ser = serial.Serial(port, 9600, timeout=300, rtscts=False, dsrdtr=False, xonxoff=False, writeTimeout=120)
 		if self.ser is None:
 			raise TeensySerialError("could not open serial %s")%port
-		self.ser.setDTR()
+		self.ser.flushInput()
+		self.ser.flushOutput()
 		self.obuf = ""
 
 	def write(self, s):
@@ -40,8 +41,8 @@ class TeensySerial(object):
 	def flush(self):
 		if len(self.obuf):
 			self.ser.write(self.obuf)
+			self.ser.flush()
 			self.obuf = ""
-		self.ser.flush()
 
 	def read(self, size):
 		self.flush()
@@ -50,6 +51,15 @@ class TeensySerial(object):
 
 	def readbyte(self):
 		return ord(self.read(1))
+
+	def close(self):
+		print
+		print "Closing serial device..."
+		if self.ser is None:
+			print "Device already closed."
+		else:
+			self.ser.close()
+			print "Done."
 
 class NORError(Exception):
 	pass
@@ -75,9 +85,11 @@ class NORFlasher(TeensySerial):
 		self.write(0x03)
 		val = self.readbyte()
 		if val != 0x42:
+			self.close()
 			raise NORError("Ping failed (expected 0x42, got 0x%02x)"%val)
 		val = self.readbyte()
 		if val != 0xbd:
+			self.close()
 			raise NORError("Ping failed (expected 0xbd, got 0x%02x)"%val)
 
 	def state(self):
@@ -164,14 +176,17 @@ class NORFlasher(TeensySerial):
 		if (self.MF_ID == 0):
 			print
 			print "Unknown chip manufacturer! Exiting..."
+			self.close()
 			sys.exit(1)
 		if (self.DEVICE_ID == 0):
 			print
 			print "Unknown device id! Exiting..."
+			self.close()
 			sys.exit(1)
 		if (self.DEVICE_PROTECTED == 1):
 			print
 			print "Device has protected sectors! Command not supported! Exiting..."
+			self.close()
 			sys.exit(1)
 
 	def printstate(self):
@@ -376,8 +391,10 @@ class NORFlasher(TeensySerial):
 						if (res == 84): #'T'
 							print "RY/BY timeout error while writing!"
 						elif (res == 82): #'R'
+							self.close()
 							raise NORError("Teensy receive buffer timeout! Disconnect and reconnect Teensy!")
 						else:
+							self.close()
 							raise NORError("Received unknown error! (Got 0x%02x)"%val)
 
 						self.reset = 1
@@ -395,6 +412,7 @@ class NORFlasher(TeensySerial):
 						print "(%d. Retry)"%(self.RETRY_COUNT-retries)
 
 				if retries == 0:
+					self.close()
 					raise NORError("Verification failed")
 		elif (ubm == True):
 			odata = self.readsector(addr, ssize)
@@ -424,8 +442,10 @@ class NORFlasher(TeensySerial):
 						if (res == 84): #'T'
 							print "RY/BY timeout error while writing!"
 						elif (res == 82): #'R'
+							self.close()
 							raise NORError("Teensy receive buffer timeout! Disconnect and reconnect Teensy!")
 						else:
+							self.close()
 							raise NORError("Received unknown error! (Got 0x%02x)"%val)
 
 						self.reset = 1
@@ -443,6 +463,7 @@ class NORFlasher(TeensySerial):
 						print "(%d. Retry)"%(self.RETRY_COUNT-retries)
 
 				if retries == 0:
+					self.close()
 					raise NORError("Verification failed")	
 		else:
 			odata = self.readsector(addr, ssize)
@@ -471,8 +492,10 @@ class NORFlasher(TeensySerial):
 						if (res == 84): #'T'
 							print "RY/BY timeout error while writing!"
 						elif (res == 82): #'R'
+							self.close()
 							raise NORError("Teensy receive buffer timeout! Disconnect and reconnect Teensy!")
 						else:
+							self.close()
 							raise NORError("Received unknown error! (Got 0x%02x)"%val)
 
 						self.reset = 1
@@ -490,6 +513,7 @@ class NORFlasher(TeensySerial):
 						print "(%d. Retry)"%(self.RETRY_COUNT-retries)
 
 				if retries == 0:
+					self.close()
 					raise NORError("Verification failed")
 
 	def writerange(self, addr, data, wordmode=False, ubm=False):
@@ -585,6 +609,9 @@ class NORFlasher(TeensySerial):
 	def udelay(self, v):
 		self.delay(v * 60)
 
+	def closedevice(self):
+		self.close()
+
 if __name__ == "__main__":
 	print "NORway.py v0.5 beta - Teensy++ 2.0 NOR flasher for PS3 (judges@eEcho.com)"
 	print "(Orignal noralizer.py by Hector Martin \"marcan\" <hector@marcansoft.com>)"
@@ -658,6 +685,7 @@ if __name__ == "__main__":
 		addr = int(sys.argv[3], 16)
 		if addr & 0x1:
 			print "Address must be even!"
+			n.closedevice()
 			sys.exit(1)
 		print "Erasing sector/block at address %06x..."%addr,
 		sys.stdout.flush()
@@ -675,6 +703,7 @@ if __name__ == "__main__":
 		print
 		if (n.MF_ID == 0xEC) and (n.DEVICE_ID == 0x7e0601):
 			print "Command not supported for Samsung K8Q2815UQB"
+			n.closedevice()
 			sys.exit(1)
 		data = open(sys.argv[3],"rb").read()
 		addr = 0
@@ -729,6 +758,8 @@ if __name__ == "__main__":
 		print
 		print "Entering Teensy's bootloader mode... Goodbye!"
 		n.bootloader()
+		n.closedevice()
 		sys.exit(0)
 
 	n.ping()
+	n.closedevice()

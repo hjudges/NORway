@@ -61,7 +61,10 @@ v0.4
 
 v0.5
 ----
-+ Bugfix: "NORway.py COMx release" didn't work. Now you can leave Teensy powered at
-  all times and console will boot up correctly after issuing a "release" command
 + Added block table for Samsung K8Q2815UQB. The programming modes "writeword" and
   "writewordubm" don't require manual chip/sector erase prior to writing anymore!
++ Bugfix: "NORway.py COMx release" didn't work. Now you can leave Teensy powered at
+  all times and console will boot up correctly after issuing a "release" command
++ Bugfix: increased TRANSMIT_TIMEOUT for Teensy's serial device to 1000ms
+  (required for OS X)
++ Bugfix: disabled DSR/DTR flow control (wasn't working reliably on OS X)

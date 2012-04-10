@@ -84,7 +84,10 @@
 // bits on a wire where nobody is listening, except you get an error
 // code which you can ignore for serial-like discard of data, or
 // use to know your data wasn't sent.
-#define TRANSMIT_TIMEOUT	25   /* in milliseconds */
+//#define TRANSMIT_TIMEOUT	25   /* in milliseconds */
+
+//greater timeout required for OS X
+#define TRANSMIT_TIMEOUT	1000   /* in milliseconds */
 
 // USB devices are supposed to implment a halt feature, which is
 // rarely (if ever) used.  If you comment this line out, the halt
