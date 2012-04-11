@@ -245,12 +245,22 @@ void initports()
 	
 	CONT_PORT &= ~((1<<CONT_TRI) | (1<<CONT_CE)); //LOW
 	CONT_PORT |= ((1<<CONT_WE) | (1<<CONT_OE) | (1<<CONT_RESET)); //HIGH
+
+//	ADDR1_DDR = ADDR2_DDR = ADDR3_DDR = DATA1_DDR = DATA2_DDR = CONT_DDR = 0; //all ports are always input
+//	ADDR1_PORT = ADDR2_PORT = ADDR3_PORT = DATA1_PORT = DATA2_PORT = CONT_PORT = 0; //disable pull ups for all ports
+
+//	CONT_DDR |= (1<<CONT_TRI);
+//	CONT_PORT &= ~(1<<CONT_TRI); //LOW
+//	CONT_PORT |= (1<<CONT_TRI); //HIGH
 }
 
 void releaseports()
 {
 	ADDR1_DDR = ADDR2_DDR = ADDR3_DDR = DATA1_DDR = DATA2_DDR = CONT_DDR = 0; //all ports are always input
 	ADDR1_PORT = ADDR2_PORT = ADDR3_PORT = DATA1_PORT = DATA2_PORT = CONT_PORT = 0; //disable pull ups for all ports
+
+	//CONT_DDR |= (1<<CONT_TRI);
+	//CONT_PORT |= (1<<CONT_TRI); //HIGH
 }
 
 int main(void)
@@ -328,9 +338,11 @@ int main(void)
 					}
 					else if ((in_data>>1)==3) {		//8'b0000011z: TRISTATE
 						if (in_data & 1)
-							CONT_PORT |= (1<<CONT_TRI);
+							initports();
+							//CONT_PORT &= ~(1<<CONT_TRI); //LOW
 						else
-							CONT_PORT &= ~(1<<CONT_TRI);
+							releaseports();
+							//CONT_PORT |= (1<<CONT_TRI); //HIGH
 					}
 					else if ((in_data>>1)==4) {		//8'b0000100z: RESET
 						if (in_data & 1)
@@ -338,18 +350,18 @@ int main(void)
 						else
 							CONT_PORT |= (1<<CONT_RESET);
 					}
-					else if ((in_data>>1)==6) {		//8'b0000110z: INIT/RELEASE PORTS
+					/* else if ((in_data>>1)==6) {		//8'b0000110z: INIT/RELEASE PORTS
 						if (in_data & 1)
 							initports();
 						else
 							releaseports();
+					} */
+					else if (in_data == 12) {		//8'b00001101: SPEEDTEST_READ
+						speedtest_send();
 					}
-					//else if (in_data == 12) {		//8'b00001101: SPEEDTEST_READ
-						//speedtest_send();
-					//}
-					//else if (in_data == 13) {		//8'b00001100: SPEEDTEST_WRITE
-						//speedtest_receive();
-					//}
+					else if (in_data == 13) {		//8'b00001100: SPEEDTEST_WRITE
+						speedtest_receive();
+					}
 					else if ((in_data>>1)==7) {		//8'b0000111z: WAIT
 						do_increment = (in_data & 1);
 						state = S_WAITING;

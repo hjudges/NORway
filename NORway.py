@@ -227,18 +227,18 @@ class NORFlasher(TeensySerial):
 			self.checkprotection()
 
 		print
-		print "{0:15} {1}".format("STATUS_TRIST_N:", bool(state & STATUS_TRIST_N))
-		print "{0:15} {1}".format("STATUS_RESET_N:", bool(state & STATUS_RESET_N))
-		print "{0:15} {1}".format("STATUS_READY:", bool(state & STATUS_READY))
-		print "{0:15} {1}".format("STATUS_CE_N:", bool(state & STATUS_CE_N))
-		print "{0:15} {1}".format("STATUS_WE_N:", bool(state & STATUS_WE_N))
-		print "{0:15} {1}".format("STATUS_OE_N:", bool(state & STATUS_OE_N))
+		print "{0:15} {1}".format("STATUS_TRIST_N:", "HIGH" if (state & STATUS_TRIST_N) else "LOW")
+		print "{0:15} {1}".format("STATUS_RESET_N:", "HIGH" if (state & STATUS_RESET_N) else "LOW")
+		print "{0:15} {1}".format("STATUS_READY:", "HIGH" if (state & STATUS_READY) else "LOW")
+		print "{0:15} {1}".format("STATUS_CE_N:", "HIGH" if (state & STATUS_CE_N) else "LOW")
+		print "{0:15} {1}".format("STATUS_WE_N:", "HIGH" if (state & STATUS_WE_N) else "LOW")
+		print "{0:15} {1}".format("STATUS_OE_N:", "HIGH" if (state & STATUS_OE_N) else "LOW")
 
-	def _s_trist(self, v):
-		self.write(0x06 | bool(v))
-	def _g_trist(self):
-		return not (self.state() & STATUS_TRIST_N)
-	trist = property(_g_trist, _s_trist)
+	#def _s_trist(self, v):
+	#	self.write(0x06 | bool(v))
+	#def _g_trist(self):
+	#	return not (self.state() & STATUS_TRIST_N)
+	#trist = property(_g_trist, _s_trist)
 
 	def _s_reset(self, v):
 		self.write(0x08 | bool(v))
@@ -249,7 +249,7 @@ class NORFlasher(TeensySerial):
 	# (0x0c | 0)=releaseports
 	# (0x0c | 1)=initports
 	def setports(self, v):
-		self.write(0x0c | bool(v))
+		self.write(0x06 | bool(v))
 
 	def addr(self, v):
 		assert 0 <= v <= 0x7FFFFF
@@ -652,11 +652,11 @@ if __name__ == "__main__":
 	print "Pinging..."
 	n.ping()
 
-	n.setports(1)
-	n.reset = 0
 	print "Set SB to tristate"
 	print
-	n.trist = 1
+	n.setports(1)
+	n.reset = 0
+	#n.trist = 1
 	n.printstate()
 	print
 	print "Resetting NOR..."
@@ -711,26 +711,26 @@ if __name__ == "__main__":
 			addr = int(sys.argv[4],16)
 		n.writerange(addr, data)
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
-	#elif len(sys.argv) == 4 and sys.argv[2] == "speedtest_read":
-	#	BLOCK = 0x10000
-	#	print
-	#	print "Measuring read performance..."
-	#	fo = open(sys.argv[3],"wb")
-	#	for offset in range(0, 0x800000, BLOCK):
-	#		fo.write(n.speedtest_read())
-	#		print "\r%d KB / 16384 KB"%((offset+BLOCK)/512),
-	#		sys.stdout.flush()
-	#	print
-	#	print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
-	#elif len(sys.argv) in (4,5) and sys.argv[2] == "speedtest_write":
-	#	print
-	#	print "Measuring write performance..."
-	#	data = open(sys.argv[3],"rb").read()
-	#	addr = 0
-	#	if len(sys.argv) == 5:
-	#		addr = int(sys.argv[4],16)
-	#	n.speedtest_write(addr, data)
-	#	print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
+	elif len(sys.argv) == 4 and sys.argv[2] == "speedtest_read":
+		BLOCK = 0x10000
+		print
+		print "Measuring read performance..."
+		fo = open(sys.argv[3],"wb")
+		for offset in range(0, 0x800000, BLOCK):
+			fo.write(n.speedtest_read())
+			print "\r%d KB / 16384 KB"%((offset+BLOCK)/512),
+			sys.stdout.flush()
+		print
+		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
+	elif len(sys.argv) in (4,5) and sys.argv[2] == "speedtest_write":
+		print
+		print "Measuring write performance..."
+		data = open(sys.argv[3],"rb").read()
+		addr = 0
+		if len(sys.argv) == 5:
+			addr = int(sys.argv[4],16)
+		n.speedtest_write(addr, data)
+		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
 	elif len(sys.argv) in (4,5) and sys.argv[2] == "writeword":
 		n.checkchip()
 		print
@@ -751,7 +751,7 @@ if __name__ == "__main__":
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
 	elif len(sys.argv) == 3 and sys.argv[2] == "release":
 		print
-		n.trist = 0
+		#n.trist = 0
 		n.setports(0)
 		print "NOR Released"
 	elif len(sys.argv) == 3 and sys.argv[2] == "bootloader":

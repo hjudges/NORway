@@ -98,6 +98,11 @@ int8_t usb_serial_set_control(uint8_t signals); // set DSR, DCD, RI, etc
 #define PLL_CONFIG() (PLLCSR = 0x16)
 #define USB_CONFIG() (USBCON = ((1<<USBE)|(1<<OTGPADE)))
 #define USB_FREEZE() (USBCON = ((1<<USBE)|(1<<FRZCLK)))
+#elif defined(__AVR_AT90USB1287__)
+#define HW_CONFIG() (UHWCON = 0x81)
+#define PLL_CONFIG() (PLLCSR = 0x16)
+#define USB_CONFIG() (USBCON = ((1<<USBE)|(1<<OTGPADE)))
+#define USB_FREEZE() (USBCON = ((1<<USBE)|(1<<FRZCLK)))
 #endif
 
 // standard control endpoint request types
