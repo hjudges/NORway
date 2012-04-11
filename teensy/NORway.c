@@ -281,11 +281,17 @@ int main(void)
 	MCUCR = (1<<JTD) | (1<<IVCE) | (0<<PUD);
 	MCUCR = (1<<JTD) | (0<<IVSEL) | (0<<IVCE) | (0<<PUD);
 
+	//set all i/o lines to input
+	releaseports();
+
 	// Initialize the USB, and then wait for the host to set configuration.
 	// If the Teensy is powered without a PC connected to the USB port,
 	// this will wait forever.
 	usb_init();
 	while (!usb_configured()) /* wait */ ;
+
+	//configure all i/o lines (and set tristate=low)
+	initports();
 
 	// Wait an extra second for the PC's operating system to load drivers
 	// and do whatever it does to actually be ready for input
@@ -296,8 +302,6 @@ int main(void)
 	cycle = tx_data = do_increment = tx_wr = buf_ix = offset_2nddie = 0;
 	
 	ADDR1 = ADDR2 = ADDR3 = 0;
-
-	releaseports();
 
 	while (1) {
 		// wait for the user to run client app
