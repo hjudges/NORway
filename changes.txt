@@ -69,3 +69,6 @@ v0.5
   (required for OS X)
 + Bugfix: disabled DSR/DTR flow control (wasn't working reliably on OS X)
 + Bugfix: TRISTATE wasn't set correctly
++ Added additional verification when writing is done. Although each write command
+  verifies each written sector/block, it happened that written bytes weren't
+  persistent

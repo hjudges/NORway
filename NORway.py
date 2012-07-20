@@ -227,6 +227,12 @@ class NORFlasher(TeensySerial):
 			self.checkprotection()
 
 		print
+		#print "{0:15} {1}".format("STATUS_TRIST_N:", bool(state & STATUS_TRIST_N))
+		#print "{0:15} {1}".format("STATUS_RESET_N:", bool(state & STATUS_RESET_N))
+		#print "{0:15} {1}".format("STATUS_READY:", bool(state & STATUS_READY))
+		#print "{0:15} {1}".format("STATUS_CE_N:", bool(state & STATUS_CE_N))
+		#print "{0:15} {1}".format("STATUS_WE_N:", bool(state & STATUS_WE_N))
+		#print "{0:15} {1}".format("STATUS_OE_N:", bool(state & STATUS_OE_N))
 		print "{0:15} {1}".format("STATUS_TRIST_N:", "HIGH" if (state & STATUS_TRIST_N) else "LOW")
 		print "{0:15} {1}".format("STATUS_RESET_N:", "HIGH" if (state & STATUS_RESET_N) else "LOW")
 		print "{0:15} {1}".format("STATUS_READY:", "HIGH" if (state & STATUS_READY) else "LOW")
@@ -537,6 +543,25 @@ class NORFlasher(TeensySerial):
 		sys.stdout.flush()
 		print
 
+	def verify(self, addr, data):
+		BLOCK = 0x10000
+		start = addr
+		print
+		print "Verifying..."
+		for offset in range(0, len(data)/2, BLOCK):
+			addr = start+offset*2
+			nordata = self.readsector(addr/2)
+			print "\r%d KB / %d KB"%((offset+BLOCK)/512, len(data)/1024),
+			sys.stdout.flush()
+			if (nordata == data[offset*2:offset*2+BLOCK*2]):
+				continue
+			else:
+				print
+				print "Verification failed! Please repeat command [%s]!"%self.getargs()
+				self.close()
+				sys.exit(1)
+		print
+	
 	def getsectorsize(self, addr):
 		s8kb = 0x2000
 		s64kb = 0x10000
@@ -611,6 +636,17 @@ class NORFlasher(TeensySerial):
 
 	def closedevice(self):
 		self.close()
+		
+	def getargs(self):
+		args = ""
+		for arg in sys.argv:
+			if " " in arg:
+				args = args + '"' + arg + '"' + " "
+			else:
+				args = args + arg + " "
+		if len(args) > 0:
+			args = args[0:len(args)-1]
+		return args
 
 if __name__ == "__main__":
 	print "NORway.py v0.5 beta - Teensy++ 2.0 NOR flasher for PS3 (judges@eEcho.com)"
@@ -711,6 +747,9 @@ if __name__ == "__main__":
 			addr = int(sys.argv[4],16)
 		n.writerange(addr, data)
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
+		tStart = time.time()
+		n.verify(addr, data)
+		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
 	elif len(sys.argv) == 4 and sys.argv[2] == "speedtest_read":
 		BLOCK = 0x10000
 		print
@@ -740,6 +779,9 @@ if __name__ == "__main__":
 			addr = int(sys.argv[4],16)
 		n.writerange(addr, data, True)
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
+		tStart = time.time()
+		n.verify(addr, data)
+		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
 	elif len(sys.argv) in (4,5) and sys.argv[2] == "writewordubm":
 		n.checkchip()
 		print
@@ -748,6 +790,9 @@ if __name__ == "__main__":
 		if len(sys.argv) == 5:
 			addr = int(sys.argv[4],16)
 		n.writerange(addr, data, False, True)
+		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
+		tStart = time.time()
+		n.verify(addr, data)
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
 	elif len(sys.argv) == 3 and sys.argv[2] == "release":
 		print
