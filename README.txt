@@ -1,4 +1,4 @@
-NORway v0.4
+NORway v0.5
 
 This project has been ported for the Teensy++ 2.0 from the original NOR flasher tool
 ("noralizer" by Hector Martin "marcan" <hector@marcansoft.com>) that was used to flash
@@ -33,10 +33,22 @@ Hardware connections (see "\hwinstall\nor_testpoints.png" + "\hwinstall\teensy.j
 	TRISTATE#	PE7
 	GND		GND
 
-	The Teensy requires a 3.3V voltage regulator! 5V trace has to be cut and 3V pads have to be shorted!
+--------------------------------------------
+	Powering option 1 (voltage regulator, Teensy powered by USB):
+	Install the 3.3V voltage regulator available at pjrc.com! 5V trace has to be cut and 3V pads have to be shorted!
 	Please refer to https://www.pjrc.com/teensy/3volt.html
 
 	DON'T CONNECT THE VCC SOLDER PADS TO ANYTHING!
+--------------------------------------------
+
+--------------------------------------------
+	Powering option 2 (external power, Teensy powered by console):
+	Connect Teensy's VCC solder pad to PS3's 3.3V supply (see connection diagram). 5V trace has to be cut and
+	3V pads have to be shorted!
+	Please refer to https://www.pjrc.com/teensy/3volt.html
+
+	DON'T INSTALL VOLTAGE REGULATOR!
+--------------------------------------------
 
 	Connection diagrams for other boards can be found at:
 	http://ps3devwiki.com/index.php?title=Hardware_flashing
@@ -83,12 +95,12 @@ Usage:
 	http://ps3devwiki.com/wiki/Hardware_flashing
 
 It's tested on Win7 x86/x64, but should also work just fine on any other x86/x64 Windows >=XP. Basically
-it should also work on Linux, but I didn't test. If you're running Linux, you probably know what to do. ;-)
-Serial drivers are not required for Linux.
+it should also work on Linux and OSX, but I didn't test. If you're running Linux/OSX, you probably know what to do. ;-)
+Serial drivers are not required for Linux/OSX.
 
 Thanks to "marcan" for the original implementation.
 Thanks to "CrackMyDay" for code optimizations and his Samsung tutorial!
-	check this out if you run into troubles:
+	check this out if you run into troubles (last resort):
 	http://www.ps3hax.net/showthread.php?p=284070#post284070
 Thanks to everyone else for contributing and beta testing!
 

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # *************************************************************************
-#  NORway.py v0.5 beta
+#  NORway.py v0.5 final
 #
 # Teensy++ 2.0 modifications by judges@eEcho.com
 # *************************************************************************
@@ -649,7 +649,7 @@ class NORFlasher(TeensySerial):
 		return args
 
 if __name__ == "__main__":
-	print "NORway.py v0.5 beta - Teensy++ 2.0 NOR flasher for PS3 (judges@eEcho.com)"
+	print "NORway.py v0.5 final - Teensy++ 2.0 NOR flasher for PS3 (judges@eEcho.com)"
 	print "(Orignal noralizer.py by Hector Martin \"marcan\" <hector@marcansoft.com>)"
 	print
 
@@ -666,21 +666,24 @@ if __name__ == "__main__":
 		print "           writeword     Flashes (read-erase-modify-write-verify) [filename]"
 		print "                         at [address] to NOR (word programming mode)"
 		print "           writewordubm  Flashes (read-erase-modify-write-verify) [filename]"
-		print "                         at [address] to NOR (word prgrmming/unlock bypass mode)"
+		print "                         at [address] to NOR (word prgrmmng/unlock bypass mode)"
+		print "           verify        Verifies NOR content with [filename] at [address]"
 		print "           release       Releases NOR interface, so the PS3 can boot"
 		print "           bootloader    Enters Teensy's bootloader mode"
-		print "  filename Filename for [dump|write|writeword|writewordubm]"
-		print "  address  Address for [erase|write|writeword|writewordubm]"
+		print "  filename Filename for [dump|write|writeword|writewordubm|verify]"
+		print "  address  Address for [erase|write|writeword|writewordubm|verify]"
 		print "           Default is 0x0, address must be aligned (multiple of 0x20000)"
 		print
 		print "Examples:"
 		print "  %s COM1"%sys.argv[0]
 		print "  %s COM1 dump d:\myflash.bin"%sys.argv[0]
 		print "  %s COM1 erase 0x20000"%sys.argv[0]
+		print "  %s COM1 erasechip"%sys.argv[0]
 		print "  %s COM1 write d:\myflash.bin"%sys.argv[0]
 		print "  %s COM1 write d:\myflash.bin 0xA0000"%sys.argv[0]
 		print "  %s COM1 writeword d:\myflash.bin"%sys.argv[0]
 		print "  %s COM1 writewordubm d:\myflash.bin 0x40000"%sys.argv[0]
+		print "  %s COM1 verify d:\myflash.bin"%sys.argv[0]
 		print "  %s COM1 release"%sys.argv[0]
 		sys.exit(0)
 	
@@ -737,15 +740,16 @@ if __name__ == "__main__":
 	elif len(sys.argv) in (4,5) and sys.argv[2] == "write":
 		n.checkchip()
 		print
-		if (n.MF_ID == 0xEC) and (n.DEVICE_ID == 0x7e0601):
-			print "Command not supported for Samsung K8Q2815UQB"
-			n.closedevice()
-			sys.exit(1)
 		data = open(sys.argv[3],"rb").read()
 		addr = 0
 		if len(sys.argv) == 5:
 			addr = int(sys.argv[4],16)
-		n.writerange(addr, data)
+		if (n.MF_ID == 0xEC) and (n.DEVICE_ID == 0x7e0601):
+			print "Buffered programming mode not supported for Samsung K8Q2815UQB!"
+			print "Programming in unlock bypass mode (writewordubm)..."
+			n.writerange(addr, data, False, True)
+		else:
+			n.writerange(addr, data)
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
 		tStart = time.time()
 		n.verify(addr, data)
@@ -792,6 +796,13 @@ if __name__ == "__main__":
 		n.writerange(addr, data, False, True)
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
 		tStart = time.time()
+		n.verify(addr, data)
+		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
+	elif len(sys.argv) in (4,5) and sys.argv[2] == "verify":
+		data = open(sys.argv[3],"rb").read()
+		addr = 0
+		if len(sys.argv) == 5:
+			addr = int(sys.argv[4],16)
 		n.verify(addr, data)
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
 	elif len(sys.argv) == 3 and sys.argv[2] == "release":
