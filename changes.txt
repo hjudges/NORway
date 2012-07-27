@@ -73,3 +73,12 @@ v0.5
   verifies each written sector/block, it happened that written bytes weren't
   persistent
 + Added "verify" command
+
+v0.6
+----
++ Changed programming modes "write", "writeword" and "writewordubm" to
+  "vwrite", "vwriteword" and "vwritewordubm"
++ Added new programming modes that skip verification for single 4KB blocks:
+  "write", "writeword" and "writewordubm"
+  Since verification is done anyway at the end of programming, it's not
+  necessarily required anymore to verify each single block individually.

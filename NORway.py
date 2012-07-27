@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # *************************************************************************
-#  NORway.py v0.5 final
+#  NORway.py v0.6 beta
 #
 # Teensy++ 2.0 modifications by judges@eEcho.com
 # *************************************************************************
@@ -360,7 +360,7 @@ class NORFlasher(TeensySerial):
 		self.writeat(off, data[0])
 		self.wait()
 
-	def program(self, addr, data, wordmode=False, ubm=False):
+	def program(self, addr, data, wordmode=False, ubm=False, noverify=False):
 		ssize = self.getsectorsize(addr*2)
 		assert len(data) == ssize
 		#assert (addr & 0xffff) == 0
@@ -380,9 +380,10 @@ class NORFlasher(TeensySerial):
 
 			# 4KB blocks
 			for block in range(0,ssize,0x1000):
-				odata = self.readsector(addr+(block/2), 0x1000)
-				if (odata == data[block:block+0x1000]):
-					continue
+				if (noverify == False):
+					odata = self.readsector(addr+(block/2), 0x1000)
+					if (odata == data[block:block+0x1000]):
+						continue
 
 				retries = self.RETRY_COUNT
 				while retries != 0:
@@ -411,11 +412,14 @@ class NORFlasher(TeensySerial):
 
 					retries -= 1
 
-					rdata = self.readsector(addr+(block/2), 0x1000)
-					if (rdata == data[block:block+0x1000]):
-						break
+					if (noverify == False):
+						rdata = self.readsector(addr+(block/2), 0x1000)
+						if (rdata == data[block:block+0x1000]):
+							break
+						else:
+							print "(%d. Retry)"%(self.RETRY_COUNT-retries)
 					else:
-						print "(%d. Retry)"%(self.RETRY_COUNT-retries)
+						break
 
 				if retries == 0:
 					self.close()
@@ -430,9 +434,10 @@ class NORFlasher(TeensySerial):
 
 			# 4KB blocks
 			for block in range(0,ssize,0x1000):
-				odata = self.readsector(addr+(block/2), 0x1000)
-				if (odata == data[block:block+0x1000]):
-					continue
+				if (noverify == False):
+					odata = self.readsector(addr+(block/2), 0x1000)
+					if (odata == data[block:block+0x1000]):
+						continue
 
 				retries = self.RETRY_COUNT
 				while retries != 0:
@@ -462,11 +467,14 @@ class NORFlasher(TeensySerial):
 
 					retries -= 1
 
-					rdata = self.readsector(addr+(block/2), 0x1000)
-					if (rdata == data[block:block+0x1000]):
-						break
+					if (noverify == False):
+						rdata = self.readsector(addr+(block/2), 0x1000)
+						if (rdata == data[block:block+0x1000]):
+							break
+						else:
+							print "(%d. Retry)"%(self.RETRY_COUNT-retries)
 					else:
-						print "(%d. Retry)"%(self.RETRY_COUNT-retries)
+						break
 
 				if retries == 0:
 					self.close()
@@ -481,9 +489,10 @@ class NORFlasher(TeensySerial):
 
 			# 4KB blocks
 			for block in range(0,ssize,0x1000):
-				odata = self.readsector(addr+(block/2), 0x1000)
-				if (odata == data[block:block+0x1000]):
-					continue
+				if (noverify == False):
+					odata = self.readsector(addr+(block/2), 0x1000)
+					if (odata == data[block:block+0x1000]):
+						continue
 
 				retries = self.RETRY_COUNT
 				while retries != 0:
@@ -512,17 +521,20 @@ class NORFlasher(TeensySerial):
 
 					retries -= 1
 
-					rdata = self.readsector(addr+(block/2), 0x1000)
-					if (rdata == data[block:block+0x1000]):
-						break
+					if (noverify == False):
+						rdata = self.readsector(addr+(block/2), 0x1000)
+						if (rdata == data[block:block+0x1000]):
+							break
+						else:
+							print "(%d. Retry)"%(self.RETRY_COUNT-retries)
 					else:
-						print "(%d. Retry)"%(self.RETRY_COUNT-retries)
+						break
 
 				if retries == 0:
 					self.close()
 					raise NORError("Verification failed")
 
-	def writerange(self, addr, data, wordmode=False, ubm=False):
+	def writerange(self, addr, data, wordmode=False, ubm=False, noverify=False):
 		if len(data) == 0:
 			return
 
@@ -534,7 +546,7 @@ class NORFlasher(TeensySerial):
 		while len(data) >= ssize:
 			print "\r%d KB / %d KB"%((addr-start)/1024, datasize/1024),
 			sys.stdout.flush()
-			self.program(addr/2, data[:ssize], wordmode, ubm)
+			self.program(addr/2, data[:ssize], wordmode, ubm, noverify)
 			addr += ssize
 			data = data[ssize:]
 			ssize = self.getsectorsize(addr)
@@ -649,7 +661,7 @@ class NORFlasher(TeensySerial):
 		return args
 
 if __name__ == "__main__":
-	print "NORway.py v0.5 final - Teensy++ 2.0 NOR flasher for PS3 (judges@eEcho.com)"
+	print "NORway.py v0.6 beta - Teensy++ 2.0 NOR flasher for PS3 (judges@eEcho.com)"
 	print "(Orignal noralizer.py by Hector Martin \"marcan\" <hector@marcansoft.com>)"
 	print
 
@@ -661,17 +673,23 @@ if __name__ == "__main__":
 		print "  command  dump          Reads entire NOR to [filename]"
 		print "           erase         Erases one sector/block (128KB/64KB/8KB) at [address]"
 		print "           erasechip     Erases entire NOR"
-		print "           write         Flashes (read-erase-modify-write-verify) [filename]"
+		print "           write         Flashes (read-erase-modify-write) [filename]"
 		print "                         at [address] to NOR (buffered programming mode)"
-		print "           writeword     Flashes (read-erase-modify-write-verify) [filename]"
+		print "           writeword     Flashes (read-erase-modify-write) [filename]"
 		print "                         at [address] to NOR (word programming mode)"
-		print "           writewordubm  Flashes (read-erase-modify-write-verify) [filename]"
+		print "           writewordubm  Flashes (read-erase-modify-write) [filename]"
+		print "                         at [address] to NOR (word prgrmmng/unlock bypass mode)"
+		print "           vwrite        Flashes (read-erase-modify-write-verify) [filename]"
+		print "                         at [address] to NOR (buffered programming mode)"
+		print "           vwriteword    Flashes (read-erase-modify-write-verify) [filename]"
+		print "                         at [address] to NOR (word programming mode)"
+		print "           vwritewordubm Flashes (read-erase-modify-write-verify) [filename]"
 		print "                         at [address] to NOR (word prgrmmng/unlock bypass mode)"
 		print "           verify        Verifies NOR content with [filename] at [address]"
 		print "           release       Releases NOR interface, so the PS3 can boot"
 		print "           bootloader    Enters Teensy's bootloader mode"
-		print "  filename Filename for [dump|write|writeword|writewordubm|verify]"
-		print "  address  Address for [erase|write|writeword|writewordubm|verify]"
+		print "  filename Filename for [dump|(v)write|(v)writeword|(v)writewordubm|verify]"
+		print "  address  Address for [erase|(v)write|(v)writeword|(v)writewordubm|verify]"
 		print "           Default is 0x0, address must be aligned (multiple of 0x20000)"
 		print
 		print "Examples:"
@@ -737,7 +755,7 @@ if __name__ == "__main__":
 		n.erasechip()
 		print
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
-	elif len(sys.argv) in (4,5) and sys.argv[2] == "write":
+	elif len(sys.argv) in (4,5) and (sys.argv[2] == "write" or sys.argv[2] == "vwrite"):
 		n.checkchip()
 		print
 		data = open(sys.argv[3],"rb").read()
@@ -747,9 +765,15 @@ if __name__ == "__main__":
 		if (n.MF_ID == 0xEC) and (n.DEVICE_ID == 0x7e0601):
 			print "Buffered programming mode not supported for Samsung K8Q2815UQB!"
 			print "Programming in unlock bypass mode (writewordubm)..."
-			n.writerange(addr, data, False, True)
+			if sys.argv[2] == "write":
+				n.writerange(addr, data, False, True, True)
+			else:
+				n.writerange(addr, data, False, True)
 		else:
-			n.writerange(addr, data)
+			if sys.argv[2] == "write":
+				n.writerange(addr, data, False, False, True)
+			else:
+				n.writerange(addr, data)
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
 		tStart = time.time()
 		n.verify(addr, data)
@@ -774,26 +798,32 @@ if __name__ == "__main__":
 			addr = int(sys.argv[4],16)
 		n.speedtest_write(addr, data)
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
-	elif len(sys.argv) in (4,5) and sys.argv[2] == "writeword":
+	elif len(sys.argv) in (4,5) and (sys.argv[2] == "writeword" or sys.argv[2] == "vwriteword"):
 		n.checkchip()
 		print
 		data = open(sys.argv[3],"rb").read()
 		addr = 0
 		if len(sys.argv) == 5:
 			addr = int(sys.argv[4],16)
-		n.writerange(addr, data, True)
+		if sys.argv[2] == "writeword":
+			n.writerange(addr, data, True, False, True)
+		else:
+			n.writerange(addr, data, True)
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
 		tStart = time.time()
 		n.verify(addr, data)
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
-	elif len(sys.argv) in (4,5) and sys.argv[2] == "writewordubm":
+	elif len(sys.argv) in (4,5) and (sys.argv[2] == "writewordubm" or sys.argv[2] == "vwritewordubm"):
 		n.checkchip()
 		print
 		data = open(sys.argv[3],"rb").read()
 		addr = 0
 		if len(sys.argv) == 5:
 			addr = int(sys.argv[4],16)
-		n.writerange(addr, data, False, True)
+		if sys.argv[2] == "writewordubm":
+			n.writerange(addr, data, False, True, True)
+		else:
+			n.writerange(addr, data, False, True)
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
 		tStart = time.time()
 		n.verify(addr, data)

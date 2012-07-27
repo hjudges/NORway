@@ -1,4 +1,4 @@
-NORway v0.5
+NORway v0.6 beta
 
 This project has been ported for the Teensy++ 2.0 from the original NOR flasher tool
 ("noralizer" by Hector Martin "marcan" <hector@marcansoft.com>) that was used to flash
@@ -80,7 +80,7 @@ Usage:
 	Dumping takes about 1 minute. A file "flash.bin" with a size of exactly 16 MB (16.777.216 bytes)
 	has been created in your current directory.
 	
-	Writing a complete flash using the "write" command takes about 7 minutes.
+	Writing a complete flash using the "write" command takes about 4:30 minutes.
 
 	IMPORTANT:
 	Before you flash your PS3 with anything new, make sure that the content of your dump is correct
