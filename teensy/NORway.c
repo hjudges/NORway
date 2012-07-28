@@ -6,7 +6,7 @@ Copyright (C) 2010-2011  Hector Martin "marcan" <hector@marcansoft.com>
 This code is licensed to you under the terms of the GNU GPL, version 2;
 see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 *************************************************************************
- NORway.c (v0.5 final) - Teensy++ 2.0 port by judges@eEcho.com
+ NORway.c (v0.6 beta) - Teensy++ 2.0 port by judges@eEcho.com
 *************************************************************************/
 
 #include <avr/io.h>
@@ -70,6 +70,7 @@ see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 #define BSS_64		0x10000	//32Kwords = 64KB
 #define BSS_128		0x20000	//64Kwords = 128KB
 #define BSS_WORD	0x00002	//word = 2Bytes
+
 
 void put_address(uint8_t address3, uint8_t address2, uint8_t address1) {
 	//CONT_PORT |= (1<<CONT_CE); //HIGH
@@ -232,6 +233,28 @@ void speedtest_send()
 	}
 }
 
+uint8_t verify(const uint8_t *buffer, uint16_t len)
+{
+	DATA1_DDR = DATA2_DDR = 0x00; // set for input
+	while (len)
+	{
+		CONT_PORT &= ~(1<<CONT_OE); //LOW
+		_delay_us(0.1); //better safe than sorry
+					
+		if ((*buffer++ != DATA2_PIN) || (*buffer++ != DATA1_PIN)) {
+			CONT_PORT |= (1<<CONT_OE); //HIGH
+			return 1;
+		}
+		
+		CONT_PORT |= (1<<CONT_OE); //HIGH
+		addr_increment(1);
+		len -= 2;
+	}
+	DATA1_DDR = DATA2_DDR = 0xFF;	// set for output
+	
+	return 0;
+}
+
 void initports()
 {
 	DATA1_DDR = DATA2_DDR = 0xFF;	// set for output
@@ -268,7 +291,8 @@ int main(void)
 	int16_t in_data;
 	uint16_t addr, i;
 	uint32_t bss;
-	uint8_t state, cycle, tx_data, tx_wr, buf_ix, do_increment, offset_2nddie;
+	uint8_t vaddr1, vaddr2, vaddr3;
+	uint8_t state, cycle, tx_data, tx_wr, buf_ix, do_increment, do_verify, offset_2nddie;
 	uint8_t buf_read[64];
 	uint8_t buf_write[BSS_4];
 
@@ -299,7 +323,7 @@ int main(void)
 
 	state = S_IDLE;
 	bss = BSS_128;
-	cycle = tx_data = do_increment = tx_wr = buf_ix = offset_2nddie = 0;
+	cycle = tx_data = do_increment = do_verify = tx_wr = buf_ix = offset_2nddie = 0;
 	
 	ADDR1 = ADDR2 = ADDR3 = 0;
 
@@ -360,11 +384,14 @@ int main(void)
 						else
 							releaseports();
 					} */
-					else if (in_data == 12) {		//8'b00001101: SPEEDTEST_READ
+					/* else if (in_data == 12) {		//8'b00001101: SPEEDTEST_READ
 						speedtest_send();
 					}
 					else if (in_data == 13) {		//8'b00001100: SPEEDTEST_WRITE
 						speedtest_receive();
+					} */
+					else if ((in_data>>1)==6) {		//8'b0000110z: VERIFY
+						do_verify = (in_data & 1);
 					}
 					else if ((in_data>>1)==7) {		//8'b0000111z: WAIT
 						do_increment = (in_data & 1);
@@ -515,6 +542,8 @@ int main(void)
 					break;			//and exit case
 				}
 
+				vaddr1 = ADDR1; vaddr2 = ADDR2; vaddr3 = ADDR3;
+
 				for (i = 0; i < BSS_4; i += 2) {
 					if ((buf_write[i] == 0xFF) && (buf_write[i+1] == 0xFF)) {
 						addr_increment(0);
@@ -534,6 +563,17 @@ int main(void)
 					tx_data = 'T';
 					tx_wr = 1;
 					break;			//and exit case
+				}
+
+				if (do_verify == 1) {
+					ADDR1 = vaddr1; ADDR2 = vaddr2; ADDR3 = vaddr3;
+					put_address(vaddr3, vaddr2, vaddr1);
+					
+					if (verify(buf_write, BSS_4) == 1) {
+						tx_data = 'V';
+						tx_wr = 1;
+						break;			//and exit case
+					}
 				}
 
 				tx_data = 'K';		//ALL OK! prepare OK response
@@ -556,6 +596,8 @@ int main(void)
 					break;			//and exit case
 				}
 				
+				vaddr1 = ADDR1; vaddr2 = ADDR2; vaddr3 = ADDR3;
+
 				// enter unlock bypass mode
 				put_address(offset_2nddie, 0x5, 0x55); put_data(0x0, 0xAA);
 				put_address(offset_2nddie, 0x2, 0xAA); put_data(0x0, 0x55);
@@ -586,6 +628,17 @@ int main(void)
 					break;			//and exit case
 				}
 
+				if (do_verify == 1) {
+					ADDR1 = vaddr1; ADDR2 = vaddr2; ADDR3 = vaddr3;
+					put_address(vaddr3, vaddr2, vaddr1);
+					
+					if (verify(buf_write, BSS_4) == 1) {
+						tx_data = 'V';
+						tx_wr = 1;
+						break;			//and exit case
+					}
+				}
+
 				tx_data = 'K';		//ALL OK! prepare OK response
 				tx_wr = 1;
 				break;
@@ -604,8 +657,10 @@ int main(void)
 					tx_wr = 1;
 					break;			//and exit case
 				}
-
+				
 				uint8_t saddr1, saddr2, saddr3, k;
+				vaddr1 = ADDR1; vaddr2 = ADDR2; vaddr3 = ADDR3;
+				
 				for (i = 0; i < BSS_4; i += 64) {
 					saddr1 = ADDR1; saddr2 = ADDR2; saddr3 = ADDR3;
 					
@@ -632,6 +687,17 @@ int main(void)
 					tx_data = 'T';
 					tx_wr = 1;
 					break;			//and exit case
+				}
+				
+				if (do_verify == 1) {
+					ADDR1 = vaddr1; ADDR2 = vaddr2; ADDR3 = vaddr3;
+					put_address(vaddr3, vaddr2, vaddr1);
+					
+					if (verify(buf_write, BSS_4) == 1) {
+						tx_data = 'V';
+						tx_wr = 1;
+						break;			//and exit case
+					}
 				}
 
 				tx_data = 'K';		//ALL OK! prepare OK response

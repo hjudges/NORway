@@ -360,7 +360,7 @@ class NORFlasher(TeensySerial):
 		self.writeat(off, data[0])
 		self.wait()
 
-	def program(self, addr, data, wordmode=False, ubm=False, noverify=False):
+	def program(self, addr, data, wordmode=False, ubm=False):
 		ssize = self.getsectorsize(addr*2)
 		assert len(data) == ssize
 		#assert (addr & 0xffff) == 0
@@ -371,6 +371,11 @@ class NORFlasher(TeensySerial):
 			use2nddie = 1
 
 		if (wordmode == True):
+			if (noverify == False):
+				self.write("\x0D")
+			else:
+				self.write("\x0C")
+
 			odata = self.readsector(addr, ssize)
 			if odata == data:
 				return
@@ -380,11 +385,6 @@ class NORFlasher(TeensySerial):
 
 			# 4KB blocks
 			for block in range(0,ssize,0x1000):
-				if (noverify == False):
-					odata = self.readsector(addr+(block/2), 0x1000)
-					if (odata == data[block:block+0x1000]):
-						continue
-
 				retries = self.RETRY_COUNT
 				while retries != 0:
 					self.addr(addr+(block/2))
@@ -393,13 +393,16 @@ class NORFlasher(TeensySerial):
 
 					# read write status byte
 					res = self.readbyte()
-					# 'K' = okay, 'T' = timeout error when writing, 'R' = Teensy receive buffer timeout
+					# 'K' = okay, 'T' = RY/BY timeout error while writing, 'R' = Teensy received buffer timeout, 'V' = Verification error
+					error_msg = ""
 					if (res != 75): #'K'
 						if (res == 84): #'T'
-							print "RY/BY timeout error while writing!"
+							error_msg = "RY/BY timeout error while writing!"
 						elif (res == 82): #'R'
 							self.close()
-							raise NORError("Teensy receive buffer timeout! Disconnect and reconnect Teensy!")
+							raise NORError("Teensy received buffer timeout! Disconnect and reconnect Teensy!")
+						elif (res == 86): #'V'
+							error_msg = "Verification error!"
 						else:
 							self.close()
 							raise NORError("Received unknown error! (Got 0x%02x)"%val)
@@ -412,12 +415,8 @@ class NORFlasher(TeensySerial):
 
 					retries -= 1
 
-					if (noverify == False):
-						rdata = self.readsector(addr+(block/2), 0x1000)
-						if (rdata == data[block:block+0x1000]):
-							break
-						else:
-							print "(%d. Retry)"%(self.RETRY_COUNT-retries)
+					if (res == 86):
+						print "(%d. Retry) %s"%(self.RETRY_COUNT-retries, error_msg)
 					else:
 						break
 
@@ -425,6 +424,11 @@ class NORFlasher(TeensySerial):
 					self.close()
 					raise NORError("Verification failed")
 		elif (ubm == True):
+			if (noverify == False):
+				self.write("\x0D")
+			else:
+				self.write("\x0C")
+
 			odata = self.readsector(addr, ssize)
 			if odata == data:
 				return
@@ -434,11 +438,6 @@ class NORFlasher(TeensySerial):
 
 			# 4KB blocks
 			for block in range(0,ssize,0x1000):
-				if (noverify == False):
-					odata = self.readsector(addr+(block/2), 0x1000)
-					if (odata == data[block:block+0x1000]):
-						continue
-
 				retries = self.RETRY_COUNT
 				while retries != 0:
 					# enter unlock bypass mode
@@ -448,13 +447,16 @@ class NORFlasher(TeensySerial):
 
 					# read write status byte
 					res = self.readbyte()
-					# 'K' = okay, 'T' = timeout error when writing, 'R' = Teensy receive buffer timeout
+					# 'K' = okay, 'T' = RY/BY timeout error while writing, 'R' = Teensy received buffer timeout, 'V' = Verification error
+					error_msg = ""
 					if (res != 75): #'K'
 						if (res == 84): #'T'
-							print "RY/BY timeout error while writing!"
+							error_msg = "RY/BY timeout error while writing!"
 						elif (res == 82): #'R'
 							self.close()
-							raise NORError("Teensy receive buffer timeout! Disconnect and reconnect Teensy!")
+							raise NORError("Teensy received buffer timeout! Disconnect and reconnect Teensy!")
+						elif (res == 86): #'V'
+							error_msg = "Verification error!"
 						else:
 							self.close()
 							raise NORError("Received unknown error! (Got 0x%02x)"%val)
@@ -467,12 +469,8 @@ class NORFlasher(TeensySerial):
 
 					retries -= 1
 
-					if (noverify == False):
-						rdata = self.readsector(addr+(block/2), 0x1000)
-						if (rdata == data[block:block+0x1000]):
-							break
-						else:
-							print "(%d. Retry)"%(self.RETRY_COUNT-retries)
+					if (res == 86):
+						print "(%d. Retry) %s"%(self.RETRY_COUNT-retries, error_msg)
 					else:
 						break
 
@@ -489,11 +487,6 @@ class NORFlasher(TeensySerial):
 
 			# 4KB blocks
 			for block in range(0,ssize,0x1000):
-				if (noverify == False):
-					odata = self.readsector(addr+(block/2), 0x1000)
-					if (odata == data[block:block+0x1000]):
-						continue
-
 				retries = self.RETRY_COUNT
 				while retries != 0:
 					self.addr(addr+(block/2))
@@ -502,13 +495,16 @@ class NORFlasher(TeensySerial):
 
 					# read write status byte
 					res = self.readbyte()
-					# 'K' = okay, 'T' = timeout error when writing, 'R' = Teensy receive buffer timeout
+					# 'K' = okay, 'T' = RY/BY timeout error while writing, 'R' = Teensy received buffer timeout, 'V' = Verification error
+					error_msg = ""
 					if (res != 75): #'K'
 						if (res == 84): #'T'
-							print "RY/BY timeout error while writing!"
+							error_msg = "RY/BY timeout error while writing!"
 						elif (res == 82): #'R'
 							self.close()
-							raise NORError("Teensy receive buffer timeout! Disconnect and reconnect Teensy!")
+							raise NORError("Teensy received buffer timeout! Disconnect and reconnect Teensy!")
+						elif (res == 86): #'V'
+							error_msg = "Verification error!"
 						else:
 							self.close()
 							raise NORError("Received unknown error! (Got 0x%02x)"%val)
@@ -521,12 +517,8 @@ class NORFlasher(TeensySerial):
 
 					retries -= 1
 
-					if (noverify == False):
-						rdata = self.readsector(addr+(block/2), 0x1000)
-						if (rdata == data[block:block+0x1000]):
-							break
-						else:
-							print "(%d. Retry)"%(self.RETRY_COUNT-retries)
+					if (res == 86):
+						print "(%d. Retry) %s"%(self.RETRY_COUNT-retries, error_msg)
 					else:
 						break
 
@@ -541,12 +533,17 @@ class NORFlasher(TeensySerial):
 		datasize = len(data)
 		start = addr
 
+		if (noverify == False):
+			self.write("\x0D")
+		else:
+			self.write("\x0C")
+
 		print "Writing..."
 		ssize = self.getsectorsize(addr)
 		while len(data) >= ssize:
 			print "\r%d KB / %d KB"%((addr-start)/1024, datasize/1024),
 			sys.stdout.flush()
-			self.program(addr/2, data[:ssize], wordmode, ubm, noverify)
+			self.program(addr/2, data[:ssize], wordmode, ubm)
 			addr += ssize
 			data = data[ssize:]
 			ssize = self.getsectorsize(addr)
@@ -778,26 +775,6 @@ if __name__ == "__main__":
 		tStart = time.time()
 		n.verify(addr, data)
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
-	elif len(sys.argv) == 4 and sys.argv[2] == "speedtest_read":
-		BLOCK = 0x10000
-		print
-		print "Measuring read performance..."
-		fo = open(sys.argv[3],"wb")
-		for offset in range(0, 0x800000, BLOCK):
-			fo.write(n.speedtest_read())
-			print "\r%d KB / 16384 KB"%((offset+BLOCK)/512),
-			sys.stdout.flush()
-		print
-		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
-	elif len(sys.argv) in (4,5) and sys.argv[2] == "speedtest_write":
-		print
-		print "Measuring write performance..."
-		data = open(sys.argv[3],"rb").read()
-		addr = 0
-		if len(sys.argv) == 5:
-			addr = int(sys.argv[4],16)
-		n.speedtest_write(addr, data)
-		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
 	elif len(sys.argv) in (4,5) and (sys.argv[2] == "writeword" or sys.argv[2] == "vwriteword"):
 		n.checkchip()
 		print
@@ -846,6 +823,26 @@ if __name__ == "__main__":
 		n.bootloader()
 		n.closedevice()
 		sys.exit(0)
+	#elif len(sys.argv) == 4 and sys.argv[2] == "speedtest_read":
+	#	BLOCK = 0x10000
+	#	print
+	#	print "Measuring read performance..."
+	#	fo = open(sys.argv[3],"wb")
+	#	for offset in range(0, 0x800000, BLOCK):
+	#		fo.write(n.speedtest_read())
+	#		print "\r%d KB / 16384 KB"%((offset+BLOCK)/512),
+	#		sys.stdout.flush()
+	#	print
+	#	print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
+	#elif len(sys.argv) in (4,5) and sys.argv[2] == "speedtest_write":
+	#	print
+	#	print "Measuring write performance..."
+	#	data = open(sys.argv[3],"rb").read()
+	#	addr = 0
+	#	if len(sys.argv) == 5:
+	#		addr = int(sys.argv[4],16)
+	#	n.speedtest_write(addr, data)
+	#	print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
 
 	n.ping()
 	n.closedevice()

@@ -82,3 +82,6 @@ v0.6
   "write", "writeword" and "writewordubm"
   Since verification is done anyway at the end of programming, it's not
   necessarily required anymore to verify each single block individually.
++ Moved verification algorithm to Teensy. Saves serial communication
+  overhead and gains another minute for writing modes "vwrite", "vwriteword"
+  and "vwritewordubm"
