@@ -261,21 +261,21 @@ class NORFlasher(TeensySerial):
 		assert 0 <= v <= 0x7FFFFF
 		self.write((0x80 | (v >> 16), (v >> 8) & 0xff, v & 0xff))
 
-	def wait(self, inc=False):
+	def wait(self, inc):
 		self.write(0x0e | bool(inc))
 
-	def writeword(self, data, inc=False):
+	def writeword(self, data, inc):
 		self.write((0x18 | bool(inc), (data>>8) & 0xff, data & 0xff))
 
-	def writeat(self, addr, data, inc=False):
+	def writeat(self, addr, data):
 		self.addr(addr)
-		self.writeword(data, inc)
+		self.writeword(data, False)
 
 	def bootloader(self):
 		self.write("\x04")
 		self.flush()
 
-	def readsector(self, off, blocksize=0x20000):
+	def readsector(self, off, blocksize):
 		assert (off & (blocksize/2-1)) == 0
 		self.addr(off)
 
@@ -303,7 +303,7 @@ class NORFlasher(TeensySerial):
 		self.writeat(0x2aa + offset_2nddie, 0x55)
 		self.writeat(off, 0x30)
 		self.delay(10)
-		self.wait()
+		self.wait(False)
 		self.ping()
 
 	def erasechip(self):
@@ -314,7 +314,7 @@ class NORFlasher(TeensySerial):
 		self.writeat(0x2aa, 0x55)
 		self.writeat(0x555, 0x10)
 		self.delay(10)
-		self.wait()
+		self.wait(False)
 		self.ping()
 
 		if (self.MF_ID == 0xEC) and (self.DEVICE_ID == 0x7e0601):
@@ -325,7 +325,7 @@ class NORFlasher(TeensySerial):
 			self.writeat(0x2aa+0x400000, 0x55)
 			self.writeat(0x555+0x400000, 0x10)
 			self.delay(10)
-			self.wait()
+			self.wait(False)
 			self.ping()
 
 	def programline(self, off, data):
@@ -342,7 +342,7 @@ class NORFlasher(TeensySerial):
 		for d in data:
 			self.writeword(d, True)
 		self.writeat(saddr, 0x29)
-		self.wait()
+		self.wait(False)
 
 	def programword(self, off, data):
 		if isinstance(data, str):
@@ -356,11 +356,11 @@ class NORFlasher(TeensySerial):
 		self.writeat(0x555 + offset_2nddie, 0xaa)
 		self.writeat(0x2aa + offset_2nddie, 0x55)
 		self.writeat(0x555 + offset_2nddie, 0xa0)
-		self.wait()
+		self.wait(False)
 		self.writeat(off, data[0])
-		self.wait()
+		self.wait(False)
 
-	def program(self, addr, data, wordmode=False, ubm=False):
+	def program(self, addr, data, wordmode, ubm, noverify):
 		ssize = self.getsectorsize(addr*2)
 		assert len(data) == ssize
 		#assert (addr & 0xffff) == 0
@@ -393,14 +393,14 @@ class NORFlasher(TeensySerial):
 
 					# read write status byte
 					res = self.readbyte()
-					# 'K' = okay, 'T' = RY/BY timeout error while writing, 'R' = Teensy received buffer timeout, 'V' = Verification error
+					# 'K' = okay, 'T' = timeout error when writing, 'R' = Teensy receive buffer timeout, 'V' = Verification error
 					error_msg = ""
 					if (res != 75): #'K'
 						if (res == 84): #'T'
 							error_msg = "RY/BY timeout error while writing!"
 						elif (res == 82): #'R'
 							self.close()
-							raise NORError("Teensy received buffer timeout! Disconnect and reconnect Teensy!")
+							raise NORError("Teensy receive buffer timeout! Disconnect and reconnect Teensy!")
 						elif (res == 86): #'V'
 							error_msg = "Verification error!"
 						else:
@@ -447,14 +447,14 @@ class NORFlasher(TeensySerial):
 
 					# read write status byte
 					res = self.readbyte()
-					# 'K' = okay, 'T' = RY/BY timeout error while writing, 'R' = Teensy received buffer timeout, 'V' = Verification error
+					# 'K' = okay, 'T' = timeout error when writing, 'R' = Teensy receive buffer timeout, 'V' = Verification error
 					error_msg = ""
 					if (res != 75): #'K'
 						if (res == 84): #'T'
 							error_msg = "RY/BY timeout error while writing!"
 						elif (res == 82): #'R'
 							self.close()
-							raise NORError("Teensy received buffer timeout! Disconnect and reconnect Teensy!")
+							raise NORError("Teensy receive buffer timeout! Disconnect and reconnect Teensy!")
 						elif (res == 86): #'V'
 							error_msg = "Verification error!"
 						else:
@@ -495,14 +495,14 @@ class NORFlasher(TeensySerial):
 
 					# read write status byte
 					res = self.readbyte()
-					# 'K' = okay, 'T' = RY/BY timeout error while writing, 'R' = Teensy received buffer timeout, 'V' = Verification error
+					# 'K' = okay, 'T' = timeout error when writing, 'R' = Teensy receive buffer timeout, 'V' = Verification error
 					error_msg = ""
 					if (res != 75): #'K'
 						if (res == 84): #'T'
 							error_msg = "RY/BY timeout error while writing!"
 						elif (res == 82): #'R'
 							self.close()
-							raise NORError("Teensy received buffer timeout! Disconnect and reconnect Teensy!")
+							raise NORError("Teensy receive buffer timeout! Disconnect and reconnect Teensy!")
 						elif (res == 86): #'V'
 							error_msg = "Verification error!"
 						else:
@@ -526,7 +526,7 @@ class NORFlasher(TeensySerial):
 					self.close()
 					raise NORError("Verification failed")
 
-	def writerange(self, addr, data, wordmode=False, ubm=False, noverify=False):
+	def writerange(self, addr, data, wordmode, ubm, noverify):
 		if len(data) == 0:
 			return
 
@@ -543,7 +543,7 @@ class NORFlasher(TeensySerial):
 		while len(data) >= ssize:
 			print "\r%d KB / %d KB"%((addr-start)/1024, datasize/1024),
 			sys.stdout.flush()
-			self.program(addr/2, data[:ssize], wordmode, ubm)
+			self.program(addr/2, data[:ssize], wordmode, ubm, noverify)
 			addr += ssize
 			data = data[ssize:]
 			ssize = self.getsectorsize(addr)
@@ -559,7 +559,7 @@ class NORFlasher(TeensySerial):
 		print "Verifying..."
 		for offset in range(0, len(data)/2, BLOCK):
 			addr = start+offset*2
-			nordata = self.readsector(addr/2)
+			nordata = self.readsector(addr/2, 0x20000)
 			print "\r%d KB / %d KB"%((offset+BLOCK)/512, len(data)/1024),
 			sys.stdout.flush()
 			if (nordata == data[offset*2:offset*2+BLOCK*2]):
@@ -728,7 +728,7 @@ if __name__ == "__main__":
 		print "Dumping NOR..."
 		fo = open(sys.argv[3],"wb")
 		for offset in range(0, 0x800000, BLOCK):
-			fo.write(n.readsector(offset))
+			fo.write(n.readsector(offset, 0x20000))
 			print "\r%d KB / 16384 KB"%((offset+BLOCK)/512),
 			sys.stdout.flush()
 		print
@@ -765,12 +765,12 @@ if __name__ == "__main__":
 			if sys.argv[2] == "write":
 				n.writerange(addr, data, False, True, True)
 			else:
-				n.writerange(addr, data, False, True)
+				n.writerange(addr, data, False, True, False)
 		else:
 			if sys.argv[2] == "write":
 				n.writerange(addr, data, False, False, True)
 			else:
-				n.writerange(addr, data)
+				n.writerange(addr, data, False, False, False)
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
 		tStart = time.time()
 		n.verify(addr, data)
@@ -785,7 +785,7 @@ if __name__ == "__main__":
 		if sys.argv[2] == "writeword":
 			n.writerange(addr, data, True, False, True)
 		else:
-			n.writerange(addr, data, True)
+			n.writerange(addr, data, True, False, False)
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
 		tStart = time.time()
 		n.verify(addr, data)
@@ -800,7 +800,7 @@ if __name__ == "__main__":
 		if sys.argv[2] == "writewordubm":
 			n.writerange(addr, data, False, True, True)
 		else:
-			n.writerange(addr, data, False, True)
+			n.writerange(addr, data, False, True, False)
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
 		tStart = time.time()
 		n.verify(addr, data)
