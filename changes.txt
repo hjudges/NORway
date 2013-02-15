@@ -85,3 +85,7 @@ v0.6
 + Moved verification algorithm to Teensy. Saves serial communication
   overhead and gains another minute for writing modes "vwrite", "vwriteword"
   and "vwritewordubm"
+
+v0.7
+----
++ Integration with NAND (from NANDWay 0.2 Beta)
