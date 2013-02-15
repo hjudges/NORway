@@ -1,4 +1,4 @@
-NORway v0.6 beta - Teensy++ 2.0 NOR and Dual NAND flasher
+NORway v0.7 beta - Teensy++ 2.0 NOR and Dual NAND flasher
 
 Disclaimer
 ----------
