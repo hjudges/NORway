@@ -557,8 +557,12 @@ if __name__ == "__main__":
 			sys.stdout.flush()
 
 			block += 1
-			# 99627264 / 135168
-			# 99618816 - 2e1
+
+		# write all the rest of the target blocks
+		while tgt_pgblock < nblocks:
+			block_data_tgt=data_tgt[tgt_pgblock*(block_plus_ras_sz):(tgt_pgblock+1)*(block_plus_ras_sz)]
+			fo.write(block_data_tgt)
+			tgt_pgblock += 1
 
 		print
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
