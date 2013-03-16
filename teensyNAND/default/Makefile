@@ -1,8 +1,42 @@
 ################################################################################
-# Automatically-generated file. Do not edit!
+# Notice: This Makefile has been edited to support platforms other than Windows.
+# It may be overwritten by AVR Studio.
 ################################################################################
 
-SHELL := cmd.exe
+ifdef SYSTEMROOT
+    SHELL := cmd.exe
+    EXT :=.exe
+
+    ifndef $(AVR_APP_PATH)
+
+      # Windows
+      # #########################################################################
+
+      # For Windows users, for example who have installed AVR Studio
+
+      # Put your path to "avr-gcc.exe" here (should end in "AVR ToolChain\bin\")
+      # Include the trailing slash.
+      # AVR_APP_PATH :=C:/Program Files (x86)/Atmel/AVR Studio 5.0/AVR ToolChain/bin/
+
+    endif
+else
+    ifndef $(AVR_APP_PATH)
+
+      # Linux / Mac
+      # #########################################################################
+
+      # For Linux or Mac users, for example who have installed CrossPack AVR
+
+      # Put your path to "avr-gcc" here (should end in "CrossPack-AVR/bin/")
+      # Include the trailing slash.
+      # AVR_APP_PATH :=/usr/local/CrossPack-AVR/bin/
+
+      # Otherwise, if avr-gcc is somewhere on your $PATH
+      # AVR_APP_PATH := $$(dirname $$(which avr-gcc$(EXT)))/
+
+    endif
+endif
+
 RM := rm -rf
 
 USER_OBJS :=
@@ -22,9 +56,17 @@ OBJS_AS_ARGS :=
 C_DEPS := 
 C_DEPS_AS_ARGS := 
 EXECUTABLES := 
+LIB_AS_ARGS :=
 OUTPUT_FILE_PATH :=
 OUTPUT_FILE_PATH_AS_ARGS :=
-AVR_APP_PATH :=$$$AVR_APP_PATH$$$
+HEX_FLASH_FILE_PATH :=
+HEX_FLASH_FILE_PATH_AS_ARGS :=
+HEX_EEPROM_FILE_PATH :=
+HEX_EEPROM_FILE_PATH_AS_ARGS :=
+LSS_FILE_PATH :=
+LSS_FILE_PATH_AS_ARGS :=
+MAP_FILE_PATH :=
+MAP_FILE_PATH_AS_ARGS :=
 QUOTE := "
 ADDITIONAL_DEPENDENCIES:=
 OUTPUT_FILE_DEP:=
@@ -35,7 +77,7 @@ SUBDIRS :=
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS +=  \
-../NANDWay.c \
+../NANDway.c \
 ../usb_serial.c
 
 
@@ -46,34 +88,52 @@ ASM_SRCS +=
 
 
 OBJS +=  \
-NANDWay.o \
+NANDway.o \
 usb_serial.o
 
 
 OBJS_AS_ARGS +=  \
-NANDWay.o \
+NANDway.o \
 usb_serial.o
 
 
 C_DEPS +=  \
-NANDWay.d \
+NANDway.d \
 usb_serial.d
 
 
 C_DEPS_AS_ARGS +=  \
-NANDWay.d \
+NANDway.d \
 usb_serial.d
 
 
-OUTPUT_FILE_PATH +=NANDWay.elf
+OUTPUT_FILE_PATH +=NANDway.elf
 
-OUTPUT_FILE_PATH_AS_ARGS +=NANDWay.elf
+OUTPUT_FILE_PATH_AS_ARGS +=NANDway.elf
 
-ADDITIONAL_DEPENDENCIES:=
+HEX_FLASH_FILE_PATH +=NANDway.hex
+
+HEX_FLASH_FILE_PATH_AS_ARGS +=NANDway.hex
+
+HEX_EEPROM_FILE_PATH +=NANDway.eep
+
+HEX_EEPROM_FILE_PATH_AS_ARGS +=NANDway.eep
+
+LSS_FILE_PATH +=NANDway.lss
+
+LSS_FILE_PATH_AS_ARGS +=NANDway.lss
+
+MAP_FILE_PATH =NANDway.map
+
+MAP_FILE_PATH_AS_ARGS =NANDway.map
+
+LIB_AS_ARGS +=libNANDway.a
+
+ADDITIONAL_DEPENDENCIES:= $(HEX_FLASH_FILE_PATH) size
 
 OUTPUT_FILE_DEP:= ./makedep.mk
 
-# AVR32/GNU C Compiler
+# AVR/GNU C Compiler
 
 
 
@@ -81,17 +141,13 @@ OUTPUT_FILE_DEP:= ./makedep.mk
 
 ./%.o: .././%.c
 	@echo Building file: $<
-	@echo Invoking: AVR/GNU C Compiler : (AVR_8_bit_GNU_Toolchain_3.4.1_830) 4.6.2
-	$(QUOTE)C:\Program Files (x86)\Atmel\Atmel Studio 6.0\extensions\Atmel\AVRGCC\3.4.1.95\AVRToolchain\bin\avr-gcc.exe$(QUOTE) -funsigned-char -funsigned-bitfields -DF_CPU=8000000UL  -Os -fpack-struct -fshort-enums -Wall -c -gdwarf-2 -std=gnu99  -MD -MP -MF "$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -MT"$(@:%.o=%.o)"  -mmcu=at90usb1286   -o"$@" "$<" 
+	@echo Invoking: AVR/GNU C Compiler
+	$(QUOTE)$(AVR_APP_PATH)avr-gcc$(EXT)$(QUOTE) -funsigned-char -funsigned-bitfields -DF_CPU=8000000UL  -O3 -fpack-struct -fshort-enums -Wall -c -gdwarf-2 -std=gnu99   -mmcu=at90usb1286   -MD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o"$@" "$<"
 	@echo Finished building: $<
 
 
 
-# AVR32/GNU Preprocessing Assembler
-
-
-
-# AVR32/GNU Assembler
+# AVR/GNU Assembler
 
 
 
@@ -107,24 +163,27 @@ endif
 # All Target
 all: $(OUTPUT_FILE_PATH) $(ADDITIONAL_DEPENDENCIES)
 
+# AVR/GNU C/C++ Linker
 $(OUTPUT_FILE_PATH): $(OBJS) $(USER_OBJS) $(OUTPUT_FILE_DEP)
 	@echo Building target: $@
-	@echo Invoking: AVR/GNU Linker : (AVR_8_bit_GNU_Toolchain_3.4.1_830) 4.6.2
-	$(QUOTE)C:\Program Files (x86)\Atmel\Atmel Studio 6.0\extensions\Atmel\AVRGCC\3.4.1.95\AVRToolchain\bin\avr-gcc.exe$(QUOTE) -o$(OUTPUT_FILE_PATH_AS_ARGS) $(OBJS_AS_ARGS) $(USER_OBJS) $(LIBS) -Wl,-Map="NANDWay.map" -Wl,--start-group -Wl,-lm  -Wl,--end-group  -mmcu=at90usb1286  
+	@echo Invoking: AVR/GNU C/C++ Linker
+	$(QUOTE)$(AVR_APP_PATH)avr-gcc$(EXT)$(QUOTE)  -mmcu=at90usb1286   -o$(OUTPUT_FILE_PATH_AS_ARGS) $(OBJS_AS_ARGS) $(USER_OBJS) $(LIBS)
 	@echo Finished building target: $@
-	"C:\Program Files (x86)\Atmel\Atmel Studio 6.0\extensions\Atmel\AVRGCC\3.4.1.95\AVRToolchain\bin\avr-objcopy.exe" -O ihex -R .eeprom -R .fuse -R .lock -R .signature  "NANDWay.elf" "NANDWay.hex"
-	"C:\Program Files (x86)\Atmel\Atmel Studio 6.0\extensions\Atmel\AVRGCC\3.4.1.95\AVRToolchain\bin\avr-objcopy.exe" -j .eeprom  --set-section-flags=.eeprom=alloc,load --change-section-lma .eeprom=0  --no-change-warnings -O ihex "NANDWay.elf" "NANDWay.eep" || exit 0
-	"C:\Program Files (x86)\Atmel\Atmel Studio 6.0\extensions\Atmel\AVRGCC\3.4.1.95\AVRToolchain\bin\avr-objdump.exe" -h -S "NANDWay.elf" > "NANDWay.lss"
-	"C:\Program Files (x86)\Atmel\Atmel Studio 6.0\extensions\Atmel\AVRGCC\3.4.1.95\AVRToolchain\bin\avr-objcopy.exe" -O srec -R .eeprom -R .fuse -R .lock -R .signature  "NANDWay.elf" "NANDWay.srec"
-	"C:\Program Files (x86)\Atmel\Atmel Studio 6.0\extensions\Atmel\AVRGCC\3.4.1.95\AVRToolchain\bin\avr-size.exe" "NANDWay.elf"
-	
 
 
 
+$(HEX_FLASH_FILE_PATH): $(OUTPUT_FILE_PATH)
+	$(QUOTE)$(AVR_APP_PATH)avr-objcopy$(EXT)$(QUOTE) -O ihex -R .eeprom -R .fuse -R .lock -R .signature  $(QUOTE)$<$(QUOTE) $(QUOTE)$@$(QUOTE)
 
+$(HEX_EEPROM_FILE_PATH): $(OUTPUT_FILE_PATH)
+	-$(QUOTE)$(AVR_APP_PATH)avr-objcopy$(EXT)$(QUOTE) -j .eeprom --set-section-flags=.eeprom=alloc,load --change-section-lma .eeprom=0 --no-change-warnings -O ihex $(QUOTE)$<$(QUOTE) $(QUOTE)$@$(QUOTE) || exit 0
+
+$(LSS_FILE_PATH): $(OUTPUT_FILE_PATH)
+	$(QUOTE)$(AVR_APP_PATH)avr-objdump$(EXT)$(QUOTE) -h -S $(QUOTE)$<$(QUOTE) > $(QUOTE)$@$(QUOTE)
+
+size: $(OUTPUT_FILE_PATH)
+	@$(QUOTE)$(AVR_APP_PATH)avr-size$(EXT)$(QUOTE) -C --mcu=at90usb1286 $(OUTPUT_FILE_PATH_AS_ARGS)
 
 # Other Targets
 clean:
-	-$(RM) $(OBJS_AS_ARGS)$(C_DEPS_AS_ARGS) $(EXECUTABLES) 
-	rm -rf "NANDWay.elf" "NANDWay.a" "NANDWay.hex" "NANDWay.lss" "NANDWay.eep" "NANDWay.map" "NANDWay.srec"
-	
+	-$(RM) $(OBJS_AS_ARGS)$(C_DEPS_AS_ARGS) $(EXECUTABLES) $(LIB_AS_ARGS) $(HEX_FLASH_FILE_PATH_AS_ARGS) $(HEX_EEPROM_FILE_PATH_AS_ARGS) $(LSS_FILE_PATH_AS_ARGS) $(MAP_FILE_PATH_AS_ARGS)
