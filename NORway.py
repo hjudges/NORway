@@ -291,6 +291,16 @@ class NORFlasher(TeensySerial):
 		d = self.read(blocksize)
 		return d
 
+	def stallread(self, off):
+    # write address
+		self.addr(off)
+
+    # write the command number
+		self.write("\x14")
+
+		d = self.read(2)
+		return d
+
 	def erasesector(self, off):
 		offset_2nddie = 0
 		if (self.MF_ID == 0xEC) and (self.DEVICE_ID == 0x7e0601):
@@ -685,8 +695,11 @@ if __name__ == "__main__":
 		print "           verify        Verifies NOR content with [filename] at [address]"
 		print "           release       Releases NOR interface, so the PS3 can boot"
 		print "           bootloader    Enters Teensy's bootloader mode"
+		print "           stallread     Stall the NOR chip, whilst reading 1 word at [address]"
+		print "           blinkpins     !!Danger!! Do not execute whilst PS3 or NOR is powered"
+		print "                         up it will short. Blink ALL wires high-low every 1sec."
 		print "  filename Filename for [dump|(v)write|(v)writeword|(v)writewordubm|verify]"
-		print "  address  Address for [erase|(v)write|(v)writeword|(v)writewordubm|verify]"
+		print "  address  Address for [erase|(v)write|(v)writeword|(v)writewordubm|verify|stallread]"
 		print "           Default is 0x0, address must be aligned (multiple of 0x20000)"
 		print
 		print "Examples:"
@@ -700,6 +713,8 @@ if __name__ == "__main__":
 		print "  %s COM1 writewordubm d:\myflash.bin 0x40000"%sys.argv[0]
 		print "  %s COM1 verify d:\myflash.bin"%sys.argv[0]
 		print "  %s COM1 release"%sys.argv[0]
+		print "  %s COM1 stallread 0x00220"%sys.argv[0]
+		print "  %s COM1 blinkpins"%sys.argv[0]
 		sys.exit(0)
 	
 	n = NORFlasher(sys.argv[1])
@@ -733,6 +748,55 @@ if __name__ == "__main__":
 			sys.stdout.flush()
 		print
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
+
+	elif len(sys.argv) == 3 and sys.argv[2] == "stallread":
+		print
+		print "Stall the Reading of NOR, halt & leave data on the pins..."
+
+		addr = int(sys.argv[3], 16)
+		if addr & 0x1:
+			print "Address must be even!"
+			n.closedevice()
+			sys.exit(1)
+
+		dw = n.stallread(addr)
+
+		print "Data at address offset %06x: data0=%02x,data2=%02x"%addr,dw[0].dw[1]
+		# print "data = %x"%(dw),
+		print "Data pins of NOR are now hung ready for logic or multimeter probing."
+		sys.stdout.flush()
+
+		print
+		raw_input("Press Enter to continue...")
+		# Send resume command
+		n.write("\x00")
+		# print "Press Ctrl+C To Exit."
+
+	elif len(sys.argv) == 3 and sys.argv[2] == "blinkpins":
+		print
+		print "########################################################################"
+		print "!! DANGER !! WARNING !!"
+		print "########################################################################"
+		print "This command will drive all of the Output Pins of Teensy incl CE,WE etc."
+		print "Pins Blink low-high everyt 1sec. All Ports A,B,C,D,E,F simultaneously."
+		print
+		print "                      ###########################"
+		print "                        !! STOP AND READ NOW !!"
+		print "                      ###########################"
+		print
+		print "Your PS3 must be copmletely switched OFF, with the Power cable unplugged."
+		print "And no external power supply attached, and no VCC power to the NOR Chip."
+		print "########################################################################"
+		print
+		raw_input("Press Enter to continue. CTRL+C to cancel / abort.")
+		print
+
+		# Send blinkpins Command
+		n.write("\x00")
+		print "Teensy pins are now being driven, blinking high-low, once per second."
+		print "Ready multimeter probing. Check Datasheets for NOR and ATMEL AT90USB1286."
+		raw_input("Press Enter to continue...")    
+
 	elif len(sys.argv) == 4 and sys.argv[2] == "erase":
 		n.checkchip()
 		print
