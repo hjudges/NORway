@@ -452,7 +452,7 @@ int main(void)
   					state = S_STALLREAD;
           }
 					else if (in_data==0x21) {		//8'b00100001: BLINKPINS
-  					state = S_STALLREAD;
+  					state = S_BLINKPINS;
           }
 					else if ((in_data>>7)==1) {		//8'b1zzzzzzz: ADDR
 						//CONT_PORT |= (1<<CONT_CE); //HIGH
@@ -504,6 +504,8 @@ int main(void)
   				_delay_us(1000);
 			  }
 				CONT_PORT |= (1<<CONT_OE); //HIGH
+				DATA1_DDR = DATA2_DDR = 0xFF;	// set for output
+				state = S_IDLE;
         break;
 
 			case S_BLINKPINS:
@@ -518,18 +520,28 @@ int main(void)
 
         // Clear previous. Set the initial output state.
         CONT_PORT =  ADDR1_PORT = ADDR2_PORT = ADDR3_PORT = DATA1_PORT = DATA2_PORT = 0x00; //low
+        // But keep TRISTATE low (E7), Chip Enable High (E0) and Output Enable High (E1)
+      	CONT_PORT &= ~(1<<CONT_TRI); //LOW
+      	CONT_PORT |= ((1<<CONT_CE) | (1<<CONT_OE)); //HIGH
+
   			//all ports are set to output
         CONT_DDR = ADDR1_DDR = ADDR2_DDR = ADDR3_DDR = DATA1_DDR = DATA2_DDR = 0xFF;
-        //toggle test
-        while (usb_configured()) {
+
+        // while (usb_configured()) { // doesn't fall out after NORway.py quits
+        // we might replace by driving the 1 sec transitions on the PC - side
+        while (1) {
           CONT_PORT =  ADDR1_PORT = ADDR2_PORT = ADDR3_PORT = DATA1_PORT = DATA2_PORT = 0xFF; //high
+        	CONT_PORT &= ~(1<<CONT_TRI); //LOW
+        	CONT_PORT |= ((1<<CONT_CE) | (1<<CONT_OE)); //HIGH
           _delay_ms(1000);
           CONT_PORT =  ADDR1_PORT = ADDR2_PORT = ADDR3_PORT = DATA1_PORT = DATA2_PORT = 0x00; //low
+        	CONT_PORT &= ~(1<<CONT_TRI); //LOW
+        	CONT_PORT |= ((1<<CONT_CE) | (1<<CONT_OE)); //HIGH
           _delay_ms(1000);
 
-          // Poll the USB bus, to recieve resume command code
+          // Break when we recieve the resume command code
           if ((in_data = usb_serial_getchar()) != -1) {
-            if (in_data == 0) {				//8'b00000000: NOP
+            if (in_data == 0) {        //8'b00000000: NOP
               break;
             }
           }
@@ -542,7 +554,9 @@ int main(void)
         CONT_DDR = cddr;
         ADDR1_DDR = addr1; ADDR2_DDR = addr2; ADDR3_DDR = addr3;
         DATA1_DDR = dddr1; DATA2_DDR = dddr2;
+
         // continue normal operations
+        state = S_IDLE;
 				break;
 
 			case S_READING:

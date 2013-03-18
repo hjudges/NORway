@@ -749,7 +749,7 @@ if __name__ == "__main__":
 		print
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
 
-	elif len(sys.argv) == 3 and sys.argv[2] == "stallread":
+	elif len(sys.argv) == 4 and sys.argv[2] == "stallread":
 		print
 		print "Stall the Reading of NOR, halt & leave data on the pins..."
 
@@ -759,14 +759,63 @@ if __name__ == "__main__":
 			n.closedevice()
 			sys.exit(1)
 
+		# Read the data
 		dw = n.stallread(addr)
 
-		print "Data at address offset %06x: data0=%02x,data2=%02x"%addr,dw[0].dw[1]
-		# print "data = %x"%(dw),
+		print "We are reading 1 WORD (16-bits) at location 0x%06x" % addr
+		print
+		print
+		print
+
+		print "  ADDRESS    0x%06x     0x%06x" % ( addr, addr+1 )
+		print
+		print "     DATA      0x%02x         0x%02x" % ( ord(dw[0]), ord(dw[1]) )
+		print
+		print "     BANK     PORT C       PORT D"
+		print
+		print "      PIN    C7....C0     D7....D0"
+		print
+		print "             |      |     |      |"
+		print "             v      v     v      v"
+		print "             "+"{0:#010b}  ".format(ord(dw[0]))[2:],"  "+"{0:#010b}".format(ord(dw[1]))[2:]
+		print
+
+		print
+		print
+		print
+
+		print "  PINS - FRONTWAYS"
+		print
+		print "  GND  B7  D0  D1  D2  D3  D4  D5  D6  D7  E0  E1  C0  C1  C2  C3  C4  C5  C6  C7"
+		print "    -   -  ",
+		for i in range(8):
+			print "{0:#01b}  ".format(ord(dw[1]) >> i & 1)[2:],
+		print "-   -  ",
+		for i in range(8):
+			print "{0:#01b}  ".format(ord(dw[0]) >> i & 1)[2:],
+		print
+		print
+		print
+		print
+		print
+
+		# print "  PINS - BACKWARDS"
+		# print
+		# print "   C7  C6  C5  C4  C3  C2  C1  C0  E1  E0  D7  D6  D5  D4  D3  D2  D1  D0  B7  GND"
+		# print "   ",
+		# for i in range(8):
+		# 	print "{0:#01b}  ".format(ord(dw[0]) >> (7-i) & 1)[2:],
+		# print "-   -  ",
+		# for i in range(8):
+		# 	print "{0:#01b}  ".format(ord(dw[1]) >> (7-i) & 1)[2:],
+		# print "-   -  ",
+		# print
+		# print
+		# print
+
 		print "Data pins of NOR are now hung ready for logic or multimeter probing."
 		sys.stdout.flush()
 
-		print
 		raw_input("Press Enter to continue...")
 		# Send resume command
 		n.write("\x00")
@@ -777,8 +826,9 @@ if __name__ == "__main__":
 		print "########################################################################"
 		print "!! DANGER !! WARNING !!"
 		print "########################################################################"
-		print "This command will drive all of the Output Pins of Teensy incl CE,WE etc."
+		print "This command will drive all of the Data + Address Output Pins of Teensy."
 		print "Pins Blink low-high everyt 1sec. All Ports A,B,C,D,E,F simultaneously."
+		print "Exceptions are: TRISTATE (E7 stays low), CE (E0 high) and OE (E1 high)."
 		print
 		print "                      ###########################"
 		print "                        !! STOP AND READ NOW !!"
@@ -792,10 +842,15 @@ if __name__ == "__main__":
 		print
 
 		# Send blinkpins Command
-		n.write("\x00")
+		n.write("\x21")
+		n.flush()
 		print "Teensy pins are now being driven, blinking high-low, once per second."
 		print "Ready multimeter probing. Check Datasheets for NOR and ATMEL AT90USB1286."
 		raw_input("Press Enter to continue...")    
+		n.write("\x00")
+		n.flush()
+		n.closedevice()
+		sys.exit(1)
 
 	elif len(sys.argv) == 4 and sys.argv[2] == "erase":
 		n.checkchip()
