@@ -63,6 +63,8 @@ see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 #define S_WRITEWORD		9
 #define S_WRITEWORDUBM	10
 #define S_WRITEWBP		11
+#define S_STALLREAD		12
+#define S_BLINKPINS		13
 
 // Define block/sector size for reading/writing
 #define BSS_4		0x01000	//2Kwords = 4KB
@@ -296,6 +298,10 @@ int main(void)
 	uint8_t buf_read[64];
 	uint8_t buf_write[BSS_4];
 
+	// Temporarily store the pin state of all ports (blinkpins cmd)
+	uint8_t cp,ap1,ap2,ap3,dp1,dp2;
+	uint8_t cddr,addr1,addr2,addr3,dddr1,dddr2;
+
 	// set for 8 MHz clock
 	CPU_PRESCALE(1);
 	// set for 16 MHz clock
@@ -442,6 +448,12 @@ int main(void)
 						cycle = (in_data<<2)>>2;
 						state = S_DELAY;
 					}
+					else if (in_data==0x20) {		//8'b00100000: STALLREAD
+  					state = S_STALLREAD;
+          }
+					else if (in_data==0x21) {		//8'b00100001: BLINKPINS
+  					state = S_BLINKPINS;
+          }
 					else if ((in_data>>7)==1) {		//8'b1zzzzzzz: ADDR
 						//CONT_PORT |= (1<<CONT_CE); //HIGH
 						ADDR3 = ((in_data<<1)>>1);
@@ -473,6 +485,78 @@ int main(void)
 					//CONT_PORT &= ~(1<<CONT_CE); //LOW
 					state = S_IDLE;
 				}
+				break;
+
+			case S_STALLREAD:
+				CONT_PORT &= ~(1<<CONT_OE); //LOW
+				_delay_us(0.1); //better safe than sorry
+				usb_serial_putchar(DATA1_PIN); // addr1
+				usb_serial_putchar(DATA2_PIN); // addr2
+
+        // Wait indefinitely, until USB connection is closed, or "Press any key to continue"
+        while (usb_configured()) {
+          // Poll the USB bus, to recieve resume command code
+          if ((in_data = usb_serial_getchar()) != -1) {
+            if (in_data == 0) {				//8'b00000000: NOP
+              break;
+            }
+          }
+  				_delay_us(1000);
+			  }
+				CONT_PORT |= (1<<CONT_OE); //HIGH
+				DATA1_DDR = DATA2_DDR = 0xFF;	// set for output
+				state = S_IDLE;
+        break;
+
+			case S_BLINKPINS:
+        // Save previous state of all ports, to restore when finished.
+        cp = CONT_PORT;
+        ap1 = ADDR1_PORT; ap2 = ADDR2_PORT; ap3 = ADDR3_PORT;
+        dp1 = DATA1_PORT; dp2 = DATA2_PORT;
+
+        cddr = CONT_DDR;
+        addr1 = ADDR1_DDR; addr2 = ADDR2_DDR; addr3 = ADDR3_DDR;
+        dddr1 = DATA1_DDR; dddr2 = DATA2_DDR;
+
+        // Clear previous. Set the initial output state.
+        CONT_PORT =  ADDR1_PORT = ADDR2_PORT = ADDR3_PORT = DATA1_PORT = DATA2_PORT = 0x00; //low
+        // But keep TRISTATE low (E7), Chip Enable High (E0) and Output Enable High (E1)
+      	CONT_PORT &= ~(1<<CONT_TRI); //LOW
+      	CONT_PORT |= ((1<<CONT_CE) | (1<<CONT_OE)); //HIGH
+
+  			//all ports are set to output
+        CONT_DDR = ADDR1_DDR = ADDR2_DDR = ADDR3_DDR = DATA1_DDR = DATA2_DDR = 0xFF;
+
+        // while (usb_configured()) { // doesn't fall out after NORway.py quits
+        // we might replace by driving the 1 sec transitions on the PC - side
+        while (1) {
+          CONT_PORT =  ADDR1_PORT = ADDR2_PORT = ADDR3_PORT = DATA1_PORT = DATA2_PORT = 0xFF; //high
+        	CONT_PORT &= ~(1<<CONT_TRI); //LOW
+        	CONT_PORT |= ((1<<CONT_CE) | (1<<CONT_OE)); //HIGH
+          _delay_ms(1000);
+          CONT_PORT =  ADDR1_PORT = ADDR2_PORT = ADDR3_PORT = DATA1_PORT = DATA2_PORT = 0x00; //low
+        	CONT_PORT &= ~(1<<CONT_TRI); //LOW
+        	CONT_PORT |= ((1<<CONT_CE) | (1<<CONT_OE)); //HIGH
+          _delay_ms(1000);
+
+          // Break when we recieve the resume command code
+          if ((in_data = usb_serial_getchar()) != -1) {
+            if (in_data == 0) {        //8'b00000000: NOP
+              break;
+            }
+          }
+        }
+        // Clean up, restore ports back to previously saved state
+        CONT_PORT = cp;
+        ADDR1_PORT = ap1; ADDR2_PORT = ap2; ADDR3_PORT = ap3;
+        DATA1_PORT = dp1; DATA2_PORT = dp2;
+
+        CONT_DDR = cddr;
+        ADDR1_DDR = addr1; ADDR2_DDR = addr2; ADDR3_DDR = addr3;
+        DATA1_DDR = dddr1; DATA2_DDR = dddr2;
+
+        // continue normal operations
+        state = S_IDLE;
 				break;
 
 			case S_READING:
