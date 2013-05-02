@@ -148,6 +148,7 @@ class NANDFlasher(TeensySerial):
 			self.NAND_PAGE_SZ_PLUS_RAS = self.NAND_PAGE_SZ + self.NAND_RAS
 			self.NAND_NBLOCKS = 1024
 			self.NAND_NPAGES = self.NAND_PAGES_PER_BLOCK * self.NAND_NBLOCKS
+			self.NAND_BLOCK_SZ_PLUS_RAS = self.NAND_PAGES_PER_BLOCK * self.NAND_PAGE_SZ_PLUS_RAS
 			
 		
 		if (self.MF_ID == 0):
@@ -433,7 +434,7 @@ def ps3_validate_block(block_data, page_plus_ras_sz, page_sz):
 		
 
 if __name__ == "__main__":
-	print "NANDWay v0.2 beta - Teensy++ 2.0 NAND flasher for PS3 (and Xbox 360)"
+	print "NANDWay v0.3 beta - Teensy++ 2.0 NAND flasher for PS3 (and Xbox 360)"
 	print "(Orignal NORWay.py by judges <judges@eEcho.com>)"
 	print "(Orignal noralizer.py by Hector Martin \"marcan\" <hector@marcansoft.com>)"
 	print
