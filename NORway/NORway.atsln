@@ -1,7 +1,6 @@
-﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
-# AvrStudio Solution File, Format Version 11.00
-Project("{D1100916-62DA-4D80-A9B4-55A1E7CCEEB3}") = "NORway", "NORway.avrgccproj", "{24DB5C64-EF11-4737-AC61-C824337D3A92}"
+# Atmel Studio Solution File, Format Version 11.00
+Project("{D1100916-62DA-4D80-A9B4-55A1E7CCEEB3}") = "NORway", "NORway.cproj", "{24DB5C64-EF11-4737-AC61-C824337D3A92}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

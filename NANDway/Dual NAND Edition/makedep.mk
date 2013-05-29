@@ -2,7 +2,7 @@
 # Automatically-generated file. Do not edit or delete the file
 ################################################################################
 
-NANDWay.c
+NANDway.c
 
 usb_serial.c
 

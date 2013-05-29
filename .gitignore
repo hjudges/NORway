@@ -1,0 +1,23 @@
+NANDway/Dual NAND Edition/NANDway.d
+NANDway/Dual NAND Edition/NANDway.o
+NANDway/Dual NAND Edition/NANDway_DualNANDEdition.elf
+NANDway/Dual NAND Edition/NANDway_DualNANDEdition.map
+NANDway/Dual NAND Edition/usb_serial.d
+NANDway/Dual NAND Edition/usb_serial.o
+NANDway/NANDway.atsuo
+NANDway/Signal Booster Edition/NANDway.d
+NANDway/Signal Booster Edition/NANDway.o
+NANDway/Signal Booster Edition/NANDway_SignalBoosterEdition.elf
+NANDway/Signal Booster Edition/NANDway_SignalBoosterEdition.map
+NANDway/Signal Booster Edition/usb_serial.d
+NANDway/Signal Booster Edition/usb_serial.o
+NORway/default/NORway.d
+NORway/default/NORway.eep
+NORway/default/NORway.elf
+NORway/default/NORway.lss
+NORway/default/NORway.map
+NORway/default/NORway.o
+NORway/default/usb_serial.d
+NORway/default/usb_serial.o
+NORway/NORway.atsuo
+TcfTransactionLog.csv

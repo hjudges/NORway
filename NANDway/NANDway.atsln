@@ -1,0 +1,19 @@
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Atmel Studio Solution File, Format Version 11.00
+Project("{D1100916-62DA-4D80-A9B4-55A1E7CCEEB3}") = "NANDway", "NANDway.cproj", "{24DB5C64-EF11-4737-AC61-C824337D3A92}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Dual NAND Edition|AVR = Dual NAND Edition|AVR
+		Signal Booster Edition|AVR = Signal Booster Edition|AVR
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{24DB5C64-EF11-4737-AC61-C824337D3A92}.Dual NAND Edition|AVR.ActiveCfg = Dual NAND Edition|AVR
+		{24DB5C64-EF11-4737-AC61-C824337D3A92}.Dual NAND Edition|AVR.Build.0 = Dual NAND Edition|AVR
+		{24DB5C64-EF11-4737-AC61-C824337D3A92}.Signal Booster Edition|AVR.ActiveCfg = Signal Booster Edition|AVR
+		{24DB5C64-EF11-4737-AC61-C824337D3A92}.Signal Booster Edition|AVR.Build.0 = Signal Booster Edition|AVR
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

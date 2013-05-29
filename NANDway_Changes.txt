@@ -1,0 +1,19 @@
+NANDway - Teensy++ 2.0 NAND flasher for PS3 and many other NANDs (Effleurage / judges@eEcho.com)
+------------------------------------------------------------------------------------------------
+
+v0.2
+----
++ Initial release
+
+v0.3
+----
++ Bugfix: "Block plus RAS size" now calculated correctly for Hynix HY27US08281A
+
+v0.4
+----
++ Added SBE (Signal Booster Edition) for more reliable PS3 on-board flashing
+
+v0.5
+----
++ Added support for Samsung K9GAG08U0M, Hynix H27UBG8T2A, Hynix HY27UF082G2B
+  (probably many other 8-bit NANDs will work as well)

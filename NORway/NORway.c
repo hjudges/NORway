@@ -11,7 +11,7 @@ see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <util/delay.h>
+#include "delay_x.h"
 #include "usb_serial.h"
 
 #define CPU_PRESCALE(n)	(CLKPR = 0x80, CLKPR = (n))
@@ -83,7 +83,7 @@ void put_address(uint8_t address3, uint8_t address2, uint8_t address1) {
 void put_data(uint8_t data2, uint8_t data1) {
 	DATA2_PORT = data2;
 	DATA1_PORT = data1;
-	_delay_us(0.1);
+	_delay_ns(100);
 	CONT_PORT &= ~(1<<CONT_WE); //LOW
 	CONT_PORT |= (1<<CONT_WE); //HIGH
 }
@@ -121,7 +121,7 @@ void addr_increment(uint8_t lock_address)
 uint8_t state_waiting1(uint8_t do_increment)
 {
 	//wait 200ns for RY/BY to become active
-	_delay_us(0.2);
+	_delay_ns(200);
 	
 	uint32_t cnt = 0xFFFFFF; //approx. 17secs
 	while (cnt > 0) {
@@ -138,7 +138,7 @@ uint8_t state_waiting1(uint8_t do_increment)
 uint8_t state_waiting2(uint8_t do_increment)
 {
 	//wait 200ns for RY/BY to become active
-	_delay_us(0.2);
+	_delay_ns(200);
 	
 	while (1) {
 		if (CONT_PIN & (1<<CONT_RYBY)) {
@@ -150,7 +150,7 @@ uint8_t state_waiting2(uint8_t do_increment)
 			//_delay_us(5);
 			DATA1_DDR = DATA2_DDR = 0x00; // set for input
 			CONT_PORT &= ~(1<<CONT_OE); //LOW
-			_delay_us(0.1); //better safe than sorry
+			_delay_ns(100); //better safe than sorry
 
 			uint8_t status;
 			status = DATA1_PIN;
@@ -239,7 +239,7 @@ uint8_t verify(const uint8_t *buffer, uint16_t len)
 	while (len)
 	{
 		CONT_PORT &= ~(1<<CONT_OE); //LOW
-		_delay_us(0.1); //better safe than sorry
+		_delay_ns(100); //better safe than sorry
 					
 		if ((*buffer++ != DATA2_PIN) || (*buffer++ != DATA1_PIN)) {
 			CONT_PORT |= (1<<CONT_OE); //HIGH
@@ -478,7 +478,7 @@ int main(void)
 			case S_READING:
 				if (bss == BSS_WORD) {
 					CONT_PORT &= ~(1<<CONT_OE); //LOW
-					_delay_us(0.1); //better safe than sorry
+					_delay_ns(100); //better safe than sorry
 					usb_serial_putchar(DATA2_PIN);
 					usb_serial_putchar(DATA1_PIN);
 					CONT_PORT |= (1<<CONT_OE); //HIGH
@@ -487,7 +487,7 @@ int main(void)
 					addr = buf_ix = 0;
 					while (1) {
 						CONT_PORT &= ~(1<<CONT_OE); //LOW
-						_delay_us(0.1); //better safe than sorry
+						_delay_ns(100); //better safe than sorry
 						buf_read[buf_ix++] = DATA2_PIN;
 						buf_read[buf_ix++] = DATA1_PIN;
 						CONT_PORT |= (1<<CONT_OE); //HIGH
@@ -515,7 +515,7 @@ int main(void)
 			case S_WDATA2:
 				if ((in_data = usb_serial_getchar()) != -1) {
 					DATA1_PORT = in_data;
-					_delay_us(0.1);
+					_delay_ns(100);
 					state = S_WRITING;
 				}
 				break;
