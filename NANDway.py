@@ -66,6 +66,8 @@ class NANDError(Exception):
 	pass
 
 class NANDFlasher(TeensySerial):
+	VERSION_MAJOR = 0
+	VERSION_MINOR = 0
 	MF_ID = 0
 	DEVICE_ID = 0
 	NAND_PAGE_SZ = 0
@@ -80,28 +82,25 @@ class NANDFlasher(TeensySerial):
 	NAND_NPLANES = 0
 	NAND_PLANE_SZ = 0
 
-	def __init__(self, port, nand_id):
+	def __init__(self, port, nand_id, ver_major, ver_minor):
 		if port:
 			TeensySerial.__init__(self, port)
 		self.NAND_ID=nand_id
+		self.VERSION_MAJOR = ver_major
+		self.VERSION_MINOR = ver_minor
 
 	def ping(self):
 		self.write(0x02)
 		self.write(0x03)
-		val = self.readbyte()
-		if val != 0x43:
+		ver_major = self.readbyte()
+		ver_minor = self.readbyte()
+		freeram = (self.readbyte() << 8) | self.readbyte()
+		if (ver_major != self.VERSION_MAJOR) or (ver_minor != self.VERSION_MINOR):
+			print "Ping failed (expected v%d.%02d, got v%d.%02d)"%(self.VERSION_MAJOR, self.VERSION_MINOR, ver_major, ver_minor)
 			self.close()
-			if val == 0x42:
-				raise NANDError("Ping failed (NORWay hex? use Norway.py instead.)"%val)
-			else:
-				raise NANDError("Ping failed (expected 0x42, got 0x%02x)"%val)
-		val = self.readbyte()
-		if val != 0xbe:
-			self.close()
-			if val == 0xbd:
-				raise NANDError("Ping failed (NORWay hex? use Norway.py instead.)"%val)
-			else:
-				raise NANDError("Ping failed (expected 0xbd, got 0x%02x)"%val)
+			sys.exit(1)
+
+		return freeram
 
 	def readid(self):
 		if (self.NAND_ID==1):
@@ -158,6 +157,7 @@ class NANDFlasher(TeensySerial):
 		self.NAND_BLOCK_SZ_PLUS_RAS = self.NAND_PAGES_PER_BLOCK * self.NAND_PAGE_SZ_PLUS_RAS
 			
 	def printstate(self):
+		print "NAND%d information:"%self.NAND_ID
 		self.readid()
 
 		print
@@ -448,7 +448,10 @@ def ps3_validate_block(block_data, page_plus_ras_sz, page_sz):
 		
 
 if __name__ == "__main__":
-	print "NANDway v0.5 beta - Teensy++ 2.0 NAND flasher for PS3 (and Xbox 360)"
+	VERSION_MAJOR = 0
+	VERSION_MINOR = 60
+
+	print "NANDway v%d.%02d - Teensy++ 2.0 NAND flasher for PS3 (and Xbox 360)"%(VERSION_MAJOR, VERSION_MINOR)
 	print "(Orignal NORway.py by judges <judges@eEcho.com>)"
 	print "(Orignal noralizer.py by Hector Martin \"marcan\" <hector@marcansoft.com>)"
 	print
@@ -483,10 +486,10 @@ if __name__ == "__main__":
 		print "Examples:"
 		print "  NANDway.py COM1 0 info"
 		print "  NANDway.py COM1 0 dump d:\myflash.bin"
-		print "  NANDway.py COM1 1 dump d:\myflash.bin 3D a0"
+		print "  NANDway.py COM1 1 dump d:\myflash.bin 3d a0"
 		print "  NANDway.py COM1 0 write d:\myflash.bin"
 		print "  NANDway.py COM3 1 write d:\myflash.bin"
-		print "  NANDway.py COM3 1 vwrite d:\myflash.bin 8D A0000"
+		print "  NANDway.py COM3 1 vwrite d:\myflash.bin 8d 20"
 		print "  NANDway.py COM4 0 diffwrite d:\myflash.bin d:\myflash_diff"
 		print "  NANDway.py COM3 1 vdiffwrite d:\myflash.bin d:\myflash_diff"
 		print "  NANDway.py COM1 0 release"
@@ -529,9 +532,11 @@ if __name__ == "__main__":
 		sys.exit(0)
 		
 	
-	n = NANDFlasher(sys.argv[1], int(sys.argv[2], 10))
-	print "Pinging Nand%d..."%(int(sys.argv[2], 10))
-	n.ping()
+	n = NANDFlasher(sys.argv[1], int(sys.argv[2], 10), VERSION_MAJOR, VERSION_MINOR)
+	print "Pinging Teensy..."
+	freeram = n.ping()
+	print "Available memory: %d bytes"%(freeram)
+	print
 	
 	tStart = time.time()
 	if len(sys.argv) in (5,6,7) and sys.argv[3] == "dump":

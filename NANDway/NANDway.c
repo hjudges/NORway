@@ -14,6 +14,9 @@ see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 #include "usb_serial.h"
 //#include "clz_ctz.h"
 
+#define VERSION_MAJOR			0
+#define VERSION_MINOR			60
+
 #define BUILD_DUAL_NAND			1
 #define BUILD_SIGNAL_BOOSTER	2
 
@@ -740,10 +743,17 @@ void bootloader() {
 	__asm volatile("jmp 0x1FC00");
 }
 
+int freeRam() {
+	extern int __heap_start, *__brkval;
+	int v;
+	return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
+}
+
 int main(void) {
 	int16_t in_data;
 	uint8_t state, cycle, tx_data, tx_wr;
-
+	uint16_t freemem;
+	
 	// set for 8 MHz clock because of 3.3v regulator
 	CPU_PRESCALE(1);
 	
@@ -798,12 +808,14 @@ int main(void) {
 					else if (in_data == 1) {		//8'b00000001: READSTATE
 					}
 					else if (in_data == 2) {		//8'b00000010: PING1
-						tx_data = 0x43;
+						tx_data = VERSION_MAJOR;
 						tx_wr = 1;
 					}
 					else if (in_data == 3) {		//8'b00000011: PING2
-						tx_data = 0xbe;
-						tx_wr = 1;
+						freemem = freeRam();
+						usb_serial_putchar(VERSION_MINOR);
+						usb_serial_putchar((freemem >> 8) & 0xFF);
+						usb_serial_putchar(freemem & 0xFF);
 					}
 					else if (in_data == 4) {		//8'b00000100: BOOTLOADER
 						bootloader();
@@ -820,15 +832,27 @@ int main(void) {
 					else if (in_data == 12) {		//8'b00001100: READ_ID - NAND0
 						usb_serial_putchar('Y');
 						handle_read_id(&nand0);
+						#if BUILD_VERSION == BUILD_SIGNAL_BOOSTER
+							releaseports();
+						#endif
 					}
 					else if (in_data == 13) {		//8'b00001101: READ_PAGE - NAND0
 						handle_read_page(&nand0);
+						#if BUILD_VERSION == BUILD_SIGNAL_BOOSTER
+							releaseports();
+						#endif
 					}
 					else if (in_data == 16) {		//8'b00010zzz: WRITE_PAGE - NAND0
 						handle_write_page(&nand0);
+						#if BUILD_VERSION == BUILD_SIGNAL_BOOSTER
+							releaseports();
+						#endif
 					}
 					else if (in_data == 17) {		//8'b0001100z: ERASE_BLOCK - NAND0
 						handle_erase_block(&nand0);
+						#if BUILD_VERSION == BUILD_SIGNAL_BOOSTER
+							releaseports();
+						#endif
 					}
 					else if (in_data == 22) {		//8'b00001100: READ_ID - NAND1
 						#if BUILD_VERSION == BUILD_DUAL_NAND
