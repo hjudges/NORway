@@ -1,5 +1,5 @@
 /************************************************************************
-NANDway.c (v0.5 beta) - Teensy++ 2.0 NAND flasher for PS3
+NANDway.c (v0.61) - Teensy++ 2.0 NAND flasher for PS3
 
 Copyright (C) 2013	Effleurage
 					judges <judges@eEcho.com>
@@ -15,7 +15,7 @@ see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 //#include "clz_ctz.h"
 
 #define VERSION_MAJOR			0
-#define VERSION_MINOR			60
+#define VERSION_MINOR			61
 
 #define BUILD_DUAL_NAND			1
 #define BUILD_SIGNAL_BOOSTER	2
@@ -215,6 +215,7 @@ typedef struct _nand_port {
 						.cont_ale_port = &NAND0_CONT_ALE_PORT, .cont_ale_pin = &NAND0_CONT_ALE_PIN, .cont_ale_ddr = &NAND0_CONT_ALE_DDR,
 						.cont_we_port = &NAND0_CONT_WE_PORT, .cont_we_pin = &NAND0_CONT_WE_PIN, .cont_we_ddr = &NAND0_CONT_WE_DDR };
 
+	#define NAND_CONT_WPal		(1<<6)		// Write Protect
 	#define NAND_CONT_RYBY		(1<<7)		// Ready/Busy (ready - high, busy - low)
 
 	#define NAND_TOGGLE_WE(_nand_)			*((_nand_)->cont_we_port) = 0; *((_nand_)->cont_we_port) = 0xFF
@@ -241,8 +242,9 @@ void nand_enable(nand_port *nandp)
 							NAND_CONT_WPal |
 							NAND_CONT_RYBY; /* input - pull up */
 #elif BUILD_VERSION == BUILD_SIGNAL_BOOSTER
-	*(nandp->cont_ddr) = 0;				// all control ports - input
-	*(nandp->cont_port) = 0xFF;			/* enable pull ups */
+	*(nandp->cont_ddr) = 0xFF; 			// all control ports - output
+	*(nandp->cont_ddr) &= ~NAND_CONT_RYBY; /* ready / busy - input */
+	*(nandp->cont_port) = NAND_CONT_WPal | NAND_CONT_RYBY; /* input - pull up */
 
 	*(nandp->cont_we_ddr) = 0xFF; 		// all control ports - output
 	*(nandp->cont_we_port) = 0xFF;
