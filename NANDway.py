@@ -359,13 +359,13 @@ class NANDFlasher(TeensySerial):
 			page_valid = self.validate_page(data[pagenr*self.NAND_PAGE_SZ_PLUS_RAS:(pagenr+1)*self.NAND_PAGE_SZ_PLUS_RAS], real_pagenr)
 
 			if pagenr == 0:
-				if page_valid == 0:
-					print
-					print "Block 0x%x - Not valid. skipping..."%(pgblock)
-					return -1
-				else:
-					self.erase_block(real_pagenr)
-					
+				#if page_valid == 0:
+				#	print
+				#	print "Block 0x%x - Not valid. skipping..."%(pgblock)
+				#	return -1
+				#else:
+				self.erase_block(real_pagenr)
+
 			self.writepage(data[pagenr*self.NAND_PAGE_SZ_PLUS_RAS:(pagenr+1)*self.NAND_PAGE_SZ_PLUS_RAS], real_pagenr)
 				
 			pagenr += 1
@@ -449,7 +449,7 @@ def ps3_validate_block(block_data, page_plus_ras_sz, page_sz):
 
 if __name__ == "__main__":
 	VERSION_MAJOR = 0
-	VERSION_MINOR = 61
+	VERSION_MINOR = 62
 
 	print "NANDway v%d.%02d - Teensy++ 2.0 NAND flasher for PS3 (and Xbox 360)"%(VERSION_MAJOR, VERSION_MINOR)
 	print "(Orignal NORway.py by judges <judges@eEcho.com>)"

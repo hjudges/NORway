@@ -22,3 +22,12 @@ v0.60
 -----
 + Added version check
 + Added display of Teensy's available memory
+
+v0.61
+-----
++ Added WP control to Signal Booster Edition for easier off-board flashing
+
+v0.62
+-----
++ Bugfix: wrong RAS size for Hynix HY27US08281A
++ "Bad Blocks" won't be skipped anymore while writing

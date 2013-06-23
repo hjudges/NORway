@@ -1,5 +1,5 @@
 /************************************************************************
-NANDway.c (v0.61) - Teensy++ 2.0 NAND flasher for PS3
+NANDway.c (v0.62) - Teensy++ 2.0 NAND flasher for PS3
 
 Copyright (C) 2013	Effleurage
 					judges <judges@eEcho.com>
@@ -15,7 +15,7 @@ see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 //#include "clz_ctz.h"
 
 #define VERSION_MAJOR			0
-#define VERSION_MINOR			61
+#define VERSION_MINOR			62
 
 #define BUILD_DUAL_NAND			1
 #define BUILD_SIGNAL_BOOSTER	2
@@ -193,14 +193,14 @@ typedef struct _nand_port {
 	nand_port nand0 = { .io_port = &NAND0_IO_PORT, .io_pin = &NAND0_IO_PIN, .io_ddr = &NAND0_IO_DDR, .cont_port = &NAND0_CONT_PORT, .cont_pin = &NAND0_CONT_PIN, .cont_ddr = &NAND0_CONT_DDR };
 	nand_port nand1 = { .io_port = &NAND1_IO_PORT, .io_pin = &NAND1_IO_PIN, .io_ddr = &NAND1_IO_DDR, .cont_port = &NAND1_CONT_PORT, .cont_pin = &NAND1_CONT_PIN, .cont_ddr = &NAND1_CONT_DDR };
 
-	#define NAND_CONT_CEal		(1<<0)		// Chip Enable
-	#define NAND_CONT_REal		(1<<1)		// Read Enable
-	#define NAND_CONT_CLE		(1<<2)		// Command Latch Enable
-	#define NAND_CONT_ALE		(1<<3)		// Address Latch Enable
-	#define NAND_CONT_WPal		(1<<4)		// Write Protect
-	#define NAND_CONT_WEal		(1<<5)		// Write Enable
-	#define NAND_CONT_RYBY		(1<<6)		// Ready/Busy (ready - high, busy - low)
-	#define NAND_CONT_TRI		(1<<7)		// Tristate (ready - high, busy - low)
+	#define NAND_CONT_CEal		(1<<0)		// 0: Chip Enable
+	#define NAND_CONT_REal		(1<<1)		// 1: Read Enable
+	#define NAND_CONT_CLE		(1<<2)		// 2: Command Latch Enable
+	#define NAND_CONT_ALE		(1<<3)		// 3: Address Latch Enable
+	#define NAND_CONT_WPal		(1<<4)		// 4: Write Protect
+	#define NAND_CONT_WEal		(1<<5)		// 5: Write Enable
+	#define NAND_CONT_RYBY		(1<<6)		// 6: Ready/Busy (ready - high, busy - low)
+	#define NAND_CONT_TRI		(1<<7)		// 7: Tristate (low = console halted)
 
 	#define NAND_TOGGLE_WE(_nand_)			*((_nand_)->cont_port) &= ~(NAND_CONT_WEal); *((_nand_)->cont_port) |= NAND_CONT_WEal
 	#define NAND_IO_READ(_nand_, _data_)	*((_nand_)->cont_port) &= ~(NAND_CONT_REal); _delay_ns(100);  (_data_) = *((_nand_)->io_pin); *((_nand_)->cont_port) |= NAND_CONT_REal
@@ -215,8 +215,8 @@ typedef struct _nand_port {
 						.cont_ale_port = &NAND0_CONT_ALE_PORT, .cont_ale_pin = &NAND0_CONT_ALE_PIN, .cont_ale_ddr = &NAND0_CONT_ALE_DDR,
 						.cont_we_port = &NAND0_CONT_WE_PORT, .cont_we_pin = &NAND0_CONT_WE_PIN, .cont_we_ddr = &NAND0_CONT_WE_DDR };
 
-	#define NAND_CONT_WPal		(1<<6)		// Write Protect
-	#define NAND_CONT_RYBY		(1<<7)		// Ready/Busy (ready - high, busy - low)
+	#define NAND_CONT_WPal		(1<<6)		// 6: Write Protect
+	#define NAND_CONT_RYBY		(1<<7)		// 7: Ready/Busy (ready - high, busy - low)
 
 	#define NAND_TOGGLE_WE(_nand_)			*((_nand_)->cont_we_port) = 0; *((_nand_)->cont_we_port) = 0xFF
 	#define NAND_IO_READ(_nand_, _data_)	*((_nand_)->cont_re_port) = 0; _delay_ns(100); (_data_) = *((_nand_)->io_pin); *((_nand_)->cont_re_port) = 0xFF
@@ -386,7 +386,7 @@ uint8_t nand_read_id(nand_port *nandp)
 		nandp->info.page_size  = 512;
 		nandp->info.block_size = 32UL * nandp->info.page_size;
 		nandp->info.num_planes = 1;
-		nandp->info.oob_size = 64;
+		nandp->info.oob_size = 16;
 		nandp->info.plane_size = 1UL << 24;
 		nandp->info.bus_width = 8;
 	}
