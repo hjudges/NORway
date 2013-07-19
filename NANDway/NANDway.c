@@ -1,5 +1,5 @@
 /************************************************************************
-NANDway.c (v0.62) - Teensy++ 2.0 NAND flasher for PS3
+NANDway.c (v0.63) - Teensy++ 2.0 NAND Flasher for PS3/Xbox/Wii
 
 Copyright (C) 2013	Effleurage
 					judges <judges@eEcho.com>
@@ -15,7 +15,7 @@ see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 //#include "clz_ctz.h"
 
 #define VERSION_MAJOR			0
-#define VERSION_MINOR			62
+#define VERSION_MINOR			63
 
 #define BUILD_DUAL_NAND			1
 #define BUILD_SIGNAL_BOOSTER	2
@@ -26,19 +26,24 @@ see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 
 #define CPU_PRESCALE(n)	(CLKPR = 0x80, CLKPR = (n))
 
-// Define state
-#define S_IDLE			0
-#define S_DELAY			1
-#define S_ADDR2			2
-#define S_ADDR3			3
-#define S_READING		4
-#define S_WDATA1		5
-#define S_WDATA2		6
-#define S_WRITING		7
-#define S_WAITING		8
-#define S_WRITEWORD		9
-#define S_WRITEWORDUBM	10
-#define S_WRITEWBP		11
+// Define commands
+enum {
+	CMD_PING1 = 0,
+	CMD_PING2,
+	CMD_BOOTLOADER,
+	CMD_IO_LOCK,
+	CMD_IO_RELEASE,
+	CMD_PULLUPS_DISABLE,
+	CMD_PULLUPS_ENABLE,
+	CMD_NAND0_ID,
+	CMD_NAND0_READPAGE,
+	CMD_NAND0_WRITEPAGE,
+	CMD_NAND0_ERASEBLOCK,
+	CMD_NAND1_ID,
+	CMD_NAND1_READPAGE,
+	CMD_NAND1_WRITEPAGE,
+	CMD_NAND1_ERASEBLOCK,
+} cmd_t;
 
 /*! \brief NAND flash read page command start. */
 #define NAND_COMMAND_READ1				0x00
@@ -74,6 +79,7 @@ see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 #define BUF_SIZE_ADDR	3
 
 uint16_t 	PAGE_PLUS_RAS_SZ = 0; /* page size + Redundant Area Size */
+uint8_t		IO_PULLUPS = 0xFF;
 uint8_t		buf_rw[BUF_SIZE_RW];
 uint8_t		buf_addr[BUF_SIZE_ADDR];
 
@@ -225,7 +231,7 @@ typedef struct _nand_port {
 	#define NAND_ALE_LOW(_nand_)			*((_nand_)->cont_ale_port) = 0
 #endif
 
-#define NAND_IO_INPUT(_nand_)				*((_nand_)->io_ddr) = 0x00; *((_nand_)->io_port) = 0xFF
+#define NAND_IO_INPUT(_nand_)				*((_nand_)->io_ddr) = 0x00; *((_nand_)->io_port) = IO_PULLUPS //0=disable, 0xFF=enable
 #define NAND_IO_OUTPUT(_nand_)				*((_nand_)->io_ddr) = 0xFF
 #define NAND_IO_SET(_nand_, _data_)			*((_nand_)->io_port)=(_data_); NAND_TOGGLE_WE(_nand_)
 #define NAND_BUSY_WAIT(_nand_, _us_)		while (1) { uint8_t status; _delay_us(_us_); status = nand_status(nandp); if (status & NAND_STATUS_READY) {	break; } }
@@ -485,7 +491,9 @@ uint8_t nand_read_page(nand_port *nandp) {
 	}	
 	NAND_ALE_LOW(nandp);
 
-	if ((nandp->info.maker_code != 0xAD) && (nandp->info.device_code != 0x73))
+	if ((nandp->info.maker_code == 0xAD) && (nandp->info.device_code == 0x73))
+		_delay_ns(100);
+	else
 		NAND_COMMAND(nandp, NAND_COMMAND_READ2);
 	
 	NAND_IO_INPUT(nandp);
@@ -496,16 +504,16 @@ uint8_t nand_read_page(nand_port *nandp) {
 	
 	/* wait for the nand to read this page to the internal page register */
 	wait_ryby(nandp);
-
-	for (uint8_t k = 0; k < PAGE_PLUS_RAS_SZ / BUF_SIZE_RW; k++) {
-		for (i = 0; i < BUF_SIZE_RW; i++) {
+	
+	for (uint8_t k = 0; k < PAGE_PLUS_RAS_SZ / BUF_SIZE_RW; ++k) {
+		for (i = 0; i < BUF_SIZE_RW; ++i) {
 			NAND_IO_READ(nandp, buf_rw[i]);
 		}
 		usb_serial_write(buf_rw, BUF_SIZE_RW);
 	}
 		
 	uint16_t rest = PAGE_PLUS_RAS_SZ - ((PAGE_PLUS_RAS_SZ / BUF_SIZE_RW) * BUF_SIZE_RW);
-	for (i = 0; i < rest; i++) {
+	for (i = 0; i < rest; ++i) {
 		NAND_IO_READ(nandp, buf_rw[i]);
 	}
 	usb_serial_write(buf_rw, rest);
@@ -752,8 +760,7 @@ int freeRam() {
 }
 
 int main(void) {
-	int16_t in_data;
-	uint8_t state, cycle, tx_data, tx_wr;
+	int16_t command = -1;
 	uint16_t freemem;
 	
 	// set for 8 MHz clock because of 3.3v regulator
@@ -785,167 +792,106 @@ int main(void) {
 	// and do whatever it does to actually be ready for input
 	_delay_ms(1000);
 
-	state = S_IDLE;
-	cycle = tx_data = tx_wr = 0;
-	
 	while (1) {
-		// wait for the user to run client app
-		// which sets DTR to indicate it is ready to receive.
-		//while (!(usb_serial_get_control() & USB_SERIAL_RTS)) /* wait */ ;
-
 		// discard anything that was received prior.  Sometimes the
 		// operating system or other software will send a modem
 		// "AT command", which can still be buffered.
 		usb_serial_flush_input();
 
-		//while (usb_configured() && (usb_serial_get_control() & USB_SERIAL_RTS)) { // is user still connected?
 		while (usb_configured()) { // is user still connected?
-			tx_wr = 0;
-			switch (state) {
-			case S_IDLE:
-				if ((in_data = usb_serial_getchar()) != -1) {
-					// command
-					if (in_data == 0) {				//8'b00000000: NOP
-					}
-					else if (in_data == 1) {		//8'b00000001: READSTATE
-					}
-					else if (in_data == 2) {		//8'b00000010: PING1
-						tx_data = VERSION_MAJOR;
-						tx_wr = 1;
-					}
-					else if (in_data == 3) {		//8'b00000011: PING2
-						freemem = freeRam();
-						usb_serial_putchar(VERSION_MINOR);
-						usb_serial_putchar((freemem >> 8) & 0xFF);
-						usb_serial_putchar(freemem & 0xFF);
-					}
-					else if (in_data == 4) {		//8'b00000100: BOOTLOADER
-						bootloader();
-					}
-					else if (in_data == 5) {		//8'b00000101: ADDR_INCR
-						
-					}
-					else if (in_data == 6) {		//8'b0000011z: TRISTATE
-						releaseports();
-					}
-					else if (in_data == 15) {		//8'b0000111z: WAIT
-						state = S_WAITING;
-					}
-					else if (in_data == 12) {		//8'b00001100: READ_ID - NAND0
-						usb_serial_putchar('Y');
-						handle_read_id(&nand0);
-						#if BUILD_VERSION == BUILD_SIGNAL_BOOSTER
-							releaseports();
-						#endif
-					}
-					else if (in_data == 13) {		//8'b00001101: READ_PAGE - NAND0
-						handle_read_page(&nand0);
-						#if BUILD_VERSION == BUILD_SIGNAL_BOOSTER
-							releaseports();
-						#endif
-					}
-					else if (in_data == 16) {		//8'b00010zzz: WRITE_PAGE - NAND0
-						handle_write_page(&nand0);
-						#if BUILD_VERSION == BUILD_SIGNAL_BOOSTER
-							releaseports();
-						#endif
-					}
-					else if (in_data == 17) {		//8'b0001100z: ERASE_BLOCK - NAND0
-						handle_erase_block(&nand0);
-						#if BUILD_VERSION == BUILD_SIGNAL_BOOSTER
-							releaseports();
-						#endif
-					}
-					else if (in_data == 22) {		//8'b00001100: READ_ID - NAND1
-						#if BUILD_VERSION == BUILD_DUAL_NAND
-							usb_serial_putchar('Y');
-							handle_read_id(&nand1);
-						#elif BUILD_VERSION == BUILD_SIGNAL_BOOSTER
-							usb_serial_putchar('N');
-						#endif
-					}
-					else if (in_data == 23) {		//8'b00001101: READ_PAGE - NAND1
-						#if BUILD_VERSION == BUILD_DUAL_NAND
-							handle_read_page(&nand1);
-						#endif
-					}
-					else if (in_data == 26) {		//8'b00010zzz: WRITE_PAGE - NAND1
-						#if BUILD_VERSION == BUILD_DUAL_NAND
-							handle_write_page(&nand1);
-						#endif
-					}
-					else if (in_data == 27) {		//8'b0001100z: ERASE_BLOCK - NAND1
-						#if BUILD_VERSION == BUILD_DUAL_NAND
-							handle_erase_block(&nand1);
-						#endif
-					}
-					else if ((in_data>>6)==1) {		//8'b01zzzzzz: DELAY
-						cycle = (in_data<<2)>>2;
-						state = S_DELAY;
-					}
-					else if ((in_data>>7)==1) {		//8'b1zzzzzzz: ADDR
-						//CONT_PORT |= (1<<CONT_CE); //HIGH
-						state = S_ADDR2;
-					}
-				}
+			command = usb_serial_getchar();
+			if (command == -1) continue;
+
+			switch (command) {
+			case CMD_PING1:
+				usb_serial_putchar(VERSION_MAJOR);
 				break;
-
-			case S_DELAY:
-				if (cycle == 0)
-					state = S_IDLE;
-				else
-					cycle -= 1;
+				
+			case CMD_PING2:
+				freemem = freeRam();
+				usb_serial_putchar(VERSION_MINOR);
+				usb_serial_putchar((freemem >> 8) & 0xFF);
+				usb_serial_putchar(freemem & 0xFF);
 				break;
-
-			case S_ADDR2:
-				state = S_IDLE;
+				
+			case CMD_BOOTLOADER:
+				bootloader();
 				break;
-
-			case S_ADDR3:
-				state = S_IDLE;
+				
+			case CMD_IO_LOCK:
 				break;
-
-			case S_READING:
-				state = S_IDLE;
+				
+			case CMD_IO_RELEASE:
+				releaseports();
 				break;
-
-			case S_WDATA1:
-				state = S_IDLE;
+				
+			case CMD_PULLUPS_DISABLE:
+				IO_PULLUPS = 0;
 				break;
-
-			case S_WDATA2:
-				state = S_IDLE;
+				
+			case CMD_PULLUPS_ENABLE:
+				IO_PULLUPS = 0xFF;
 				break;
-
-			case S_WRITING:
-				state = S_IDLE;
+				
+			case CMD_NAND0_ID:
+				usb_serial_putchar('Y');
+				handle_read_id(&nand0);
+				#if BUILD_VERSION == BUILD_SIGNAL_BOOSTER
+					releaseports();
+				#endif
 				break;
-
-			case S_WRITEWORD: //"single word program mode"
-				state = S_IDLE;
+				
+			case CMD_NAND0_READPAGE:
+				handle_read_page(&nand0);
+				#if BUILD_VERSION == BUILD_SIGNAL_BOOSTER
+					releaseports();
+				#endif
 				break;
-
-			case S_WRITEWORDUBM: //"single word unlock bypass mode"
-				state = S_IDLE;
+				
+			case CMD_NAND0_WRITEPAGE:
+				handle_write_page(&nand0);
+				#if BUILD_VERSION == BUILD_SIGNAL_BOOSTER
+					releaseports();
+				#endif
 				break;
-
-			case S_WRITEWBP: //"write buffer programming"
-				state = S_IDLE;
-
+				
+			case CMD_NAND0_ERASEBLOCK:
+				handle_erase_block(&nand0);
+				#if BUILD_VERSION == BUILD_SIGNAL_BOOSTER
+					releaseports();
+				#endif
 				break;
-
-			case S_WAITING:
-				state = S_IDLE;
+				
+			case CMD_NAND1_ID:
+				#if BUILD_VERSION == BUILD_DUAL_NAND
+					usb_serial_putchar('Y');
+					handle_read_id(&nand1);
+				#elif BUILD_VERSION == BUILD_SIGNAL_BOOSTER
+					usb_serial_putchar('N');
+				#endif
 				break;
-
+				
+			case CMD_NAND1_READPAGE:
+				#if BUILD_VERSION == BUILD_DUAL_NAND
+					handle_read_page(&nand1);
+				#endif
+				break;
+				
+			case CMD_NAND1_WRITEPAGE:
+				#if BUILD_VERSION == BUILD_DUAL_NAND
+					handle_write_page(&nand1);
+				#endif
+				break;
+				
+			case CMD_NAND1_ERASEBLOCK:
+				#if BUILD_VERSION == BUILD_DUAL_NAND
+					handle_erase_block(&nand1);
+				#endif
+				break;
+				
 			default:
-				state = S_IDLE;
 				break;
 			}
-				
-			if (tx_wr == 1) {
-				usb_serial_putchar(tx_data);
-			}				
 		}		
 	}
 }

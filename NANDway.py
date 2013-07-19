@@ -68,6 +68,8 @@ class NANDError(Exception):
 class NANDFlasher(TeensySerial):
 	VERSION_MAJOR = 0
 	VERSION_MINOR = 0
+	NAND_ID = 0
+	NAND_DISABLE_PULLUPS = 0
 	MF_ID = 0
 	DEVICE_ID = 0
 	NAND_PAGE_SZ = 0
@@ -82,16 +84,34 @@ class NANDFlasher(TeensySerial):
 	NAND_NPLANES = 0
 	NAND_PLANE_SZ = 0
 
+	# Teensy commands
+	CMD_PING1 = 0
+	CMD_PING2 = 1
+	CMD_BOOTLOADER = 2
+	CMD_IO_LOCK = 3
+	CMD_IO_RELEASE = 4
+	CMD_PULLUPS_DISABLE = 5
+	CMD_PULLUPS_ENABLE = 6
+	CMD_NAND0_ID = 7
+	CMD_NAND0_READPAGE = 8
+	CMD_NAND0_WRITEPAGE = 9
+	CMD_NAND0_ERASEBLOCK = 10
+	CMD_NAND1_ID = 11
+	CMD_NAND1_READPAGE = 12
+	CMD_NAND1_WRITEPAGE = 13
+	CMD_NAND1_ERASEBLOCK = 14
+
 	def __init__(self, port, nand_id, ver_major, ver_minor):
 		if port:
 			TeensySerial.__init__(self, port)
-		self.NAND_ID=nand_id
+		self.NAND_ID = nand_id & 1
+		self.NAND_DISABLE_PULLUPS = nand_id & 10
 		self.VERSION_MAJOR = ver_major
 		self.VERSION_MINOR = ver_minor
 
 	def ping(self):
-		self.write(0x02)
-		self.write(0x03)
+		self.write(self.CMD_PING1)
+		self.write(self.CMD_PING2)
 		ver_major = self.readbyte()
 		ver_minor = self.readbyte()
 		freeram = (self.readbyte() << 8) | self.readbyte()
@@ -103,11 +123,16 @@ class NANDFlasher(TeensySerial):
 		return freeram
 
 	def readid(self):
-		if (self.NAND_ID==1):
-			self.write(22)
+		if (self.NAND_DISABLE_PULLUPS == 0):
+			self.write(self.CMD_PULLUPS_ENABLE)
 		else:
-			self.write("\x0C")
-		
+			self.write(self.CMD_PULLUPS_DISABLE)
+
+		if (self.NAND_ID == 1):
+			self.write(self.CMD_NAND1_ID)
+		else:
+			self.write(self.CMD_NAND0_ID)
+
 		isCommandSupported = self.readbyte()
 		if (isCommandSupported != 89): #'Y'
 			print
@@ -179,6 +204,8 @@ class NANDFlasher(TeensySerial):
 				print "NAND chip type:         H27UBG8T2A (0x%02x)"%self.DEVICE_ID
 			elif self.DEVICE_ID == 0xDA:
 				print "NAND chip type:         HY27UF082G2B (0x%02x)"%self.DEVICE_ID
+			elif self.DEVICE_ID == 0xDC:
+				print "NAND chip type:         H27U4G8F2D (0x%02x)"%self.DEVICE_ID
 			else:
 				print "NAND chip type:         unknown (0x%02x)"%self.DEVICE_ID
 		else:
@@ -205,7 +232,7 @@ class NANDFlasher(TeensySerial):
 		#print
 
 	def bootloader(self):
-		self.write("\x04")
+		self.write(self.CMD_BOOTLOADER)
 		self.flush()
 
 	def read_result(self):
@@ -235,10 +262,10 @@ class NANDFlasher(TeensySerial):
 		return 1
 
 	def erase_block(self, pagenr):
-		if (self.NAND_ID==1):
-			self.write(27)
+		if (self.NAND_ID == 1):
+			self.write(self.CMD_NAND1_ERASEBLOCK)
 		else:
-			self.write(17)
+			self.write(self.CMD_NAND0_ERASEBLOCK)
 
 		pgblock = pagenr / self.NAND_PAGES_PER_BLOCK
 		
@@ -253,34 +280,11 @@ class NANDFlasher(TeensySerial):
 
 		return 1
 
-		
-	def validate_page(self, data, pagenr):
-		spare = data[self.NAND_PAGE_SZ:]
-		pgblock = pagenr / self.NAND_PAGES_PER_BLOCK
-		pgoff = pagenr % self.NAND_PAGES_PER_BLOCK
-		
-		nand_bl = (ord(spare[1])<<8) | ord(spare[0])
-		if (self.MF_ID == 0xAD) and (nand_bl != 0xFFFF) and (nand_bl != pgblock) and (pgoff == 0):
-			print
-			if (pgblock < 0x3D0):
-				return 0
-		#	else:
-		#		print "Found Bad block remapping: %x to %x\n"%(nand_bl, pgblock),
-		#		sys.stdout.flush()
-		elif (self.MF_ID == 0xEC) and (pgoff==0):
-			if ord(spare[0]) == 0:
-				return 0
-			
-			
-		return 1
-
-
 	def readpage(self, page):
-
-		if (self.NAND_ID==1):
-			self.write(23)
+		if (self.NAND_ID == 1):
+			self.write(self.CMD_NAND1_READPAGE)
 		else:
-			self.write(13)
+			self.write(self.CMD_NAND0_READPAGE)
 
 		# address
 		#self.write(0x0)
@@ -295,7 +299,6 @@ class NANDFlasher(TeensySerial):
 		data = self.read(self.NAND_PAGE_SZ_PLUS_RAS)
 		return data
 		
-		
 	def writepage(self, data, pagenr):
 		if len(data) != self.NAND_PAGE_SZ_PLUS_RAS:
 			print "Incorrent data size %d"%(len(data))
@@ -303,10 +306,10 @@ class NANDFlasher(TeensySerial):
 		pgblock = pagenr / self.NAND_PAGES_PER_BLOCK
 		pgoff = pagenr % self.NAND_PAGES_PER_BLOCK
 		
-		if (self.NAND_ID==1):
-			self.write(26)
+		if (self.NAND_ID == 1):
+			self.write(self.CMD_NAND1_WRITEPAGE)
 		else:
-			self.write(16)
+			self.write(self.CMD_NAND0_WRITEPAGE)
 
 		# address
 		#self.write(0x0)
@@ -333,12 +336,6 @@ class NANDFlasher(TeensySerial):
 		
 		for page in range(block_offset*self.NAND_PAGES_PER_BLOCK, (block_offset+nblocks)*self.NAND_PAGES_PER_BLOCK, 1):
 			data = self.readpage(page)
-			page_valid = self.validate_page(data, page)
-			if page_valid == 0:
-				print
-				print "Found invalid bad block %x"%(page / self.NAND_PAGES_PER_BLOCK)
-				
-			
 			fo.write(data)
 			print "\r%d KB / %d KB"%((page-(block_offset*self.NAND_PAGES_PER_BLOCK)+1)*self.NAND_PAGE_SZ_PLUS_RAS/1024, nblocks*self.NAND_BLOCK_SZ_PLUS_RAS/1024),
 			sys.stdout.flush()
@@ -346,7 +343,6 @@ class NANDFlasher(TeensySerial):
 		return
 
 	def program_block(self, data, pgblock, verify):
-
 		pagenr = 0
 		
 		datasize = len(data)
@@ -356,20 +352,12 @@ class NANDFlasher(TeensySerial):
 		
 		while pagenr < self.NAND_PAGES_PER_BLOCK:
 			real_pagenr = (pgblock * self.NAND_PAGES_PER_BLOCK) + pagenr
-			page_valid = self.validate_page(data[pagenr*self.NAND_PAGE_SZ_PLUS_RAS:(pagenr+1)*self.NAND_PAGE_SZ_PLUS_RAS], real_pagenr)
-
 			if pagenr == 0:
-				#if page_valid == 0:
-				#	print
-				#	print "Block 0x%x - Not valid. skipping..."%(pgblock)
-				#	return -1
-				#else:
 				self.erase_block(real_pagenr)
 
 			self.writepage(data[pagenr*self.NAND_PAGE_SZ_PLUS_RAS:(pagenr+1)*self.NAND_PAGE_SZ_PLUS_RAS], real_pagenr)
 				
 			pagenr += 1
-
 
 		# verification
 		if verify == 1:
@@ -383,7 +371,6 @@ class NANDFlasher(TeensySerial):
 					
 				pagenr += 1
 				
-			
 		return 0
 
 	def program(self, data, verify, block_offset, nblocks):
@@ -421,37 +408,24 @@ class NANDFlasher(TeensySerial):
 
 		print
 		
-def validate_page_ex(is_xbox, data, pagenr, page_sz, pages_per_block):
-	spare = data[page_sz:]
-	pgblock = pagenr / pages_per_block
-	pgoff = pagenr % pages_per_block
-	
-	nand_bl = (ord(spare[1])<<8) | ord(spare[0])
-	if is_xbox and (nand_bl != 0xFFFF) and (nand_bl != pgblock) and (pgoff == 0):
-		print
-		if (pgblock < 0x3D0):
-			return 0
-	elif (is_xbox == 0) and (pgoff==0):
-		if ord(spare[0]) == 0:
-			return 0
-		
-	return 1
-
-def ps3_validate_block(block_data, page_plus_ras_sz, page_sz):
+def ps3_validate_block(block_data, page_plus_ras_sz, page_sz, blocknr):
 	spare1 = block_data[page_sz:page_plus_ras_sz]
 	spare2 = block_data[page_plus_ras_sz+page_sz:page_plus_ras_sz*2]
 	
-	if ord(spare1[0]) == 0 or ord(spare2[0]) == 0:
+	if blocknr == 0x1FF:
+		return 1
+
+	if ord(spare1[0]) != 0xFF or ord(spare2[0]) != 0xFF:
 		return 0
 		
 	return 1
-		
+
 
 if __name__ == "__main__":
 	VERSION_MAJOR = 0
-	VERSION_MINOR = 62
+	VERSION_MINOR = 63
 
-	print "NANDway v%d.%02d - Teensy++ 2.0 NAND flasher for PS3 (and Xbox 360)"%(VERSION_MAJOR, VERSION_MINOR)
+	print "NANDway v%d.%02d - Teensy++ 2.0 NAND Flasher for PS3/Xbox/Wii"%(VERSION_MAJOR, VERSION_MINOR)
 	print "(Orignal NORway.py by judges <judges@eEcho.com>)"
 	print "(Orignal noralizer.py by Hector Martin \"marcan\" <hector@marcansoft.com>)"
 	print
@@ -471,16 +445,14 @@ if __name__ == "__main__":
 		print "     Flashes (v=verify) Filename at [Offset] and [Length]"
 		print "  *  vdiffwrite/diffwrite Filename Diff-file"
 		print "     Flashes (v=verify) Filename using a Diff-file"
-		print "  *  badblocks Filename"
+		print "  *  ps3badblocks Filename"
 		print "     Identifies bad blocks in Filename (raw dump)"
-		print "  *  release"
-		print "     Releases TRISTATE, so that the PS3 can boot"
 		print "  *  bootloader"
 		print "     Enters Teensy's bootloader mode (for Teensy reprogramming)"
 		print
 		print "     Notes: 1) All offsets and lengths are in hex (number of blocks)"
 		print "            2) The Diff-file is a file which lists all the changed"
-		print "               offsets of a dump file. This should increase flashing"
+		print "               offsets of a dump file. This will increase flashing"
 		print "               time dramatically."
 		print
 		print "Examples:"
@@ -488,16 +460,16 @@ if __name__ == "__main__":
 		print "  NANDway.py COM1 0 dump d:\myflash.bin"
 		print "  NANDway.py COM1 1 dump d:\myflash.bin 3d a0"
 		print "  NANDway.py COM1 0 write d:\myflash.bin"
-		print "  NANDway.py COM3 1 write d:\myflash.bin"
+		print "  NANDway.py COM3 1 write d:\myflash.bin 20 1c"
+		print "  NANDway.py COM3 0 vwrite d:\myflash.bin"
 		print "  NANDway.py COM3 1 vwrite d:\myflash.bin 8d 20"
-		print "  NANDway.py COM4 0 diffwrite d:\myflash.bin d:\myflash_diff"
-		print "  NANDway.py COM3 1 vdiffwrite d:\myflash.bin d:\myflash_diff"
-		print "  NANDway.py COM1 0 release"
+		print "  NANDway.py COM4 0 diffwrite d:\myflash.bin d:\myflash_diff.txt"
+		print "  NANDway.py COM3 1 vdiffwrite d:\myflash.bin d:\myflash_diff.txt"
+		print "  NANDway.py COM1 0 bootloader"
+		print "  NANDway.py ps3badblocks d:\myflash.bin"
 		sys.exit(0)
 
-
-	if (len(sys.argv) == 3) and (sys.argv[1] == "badblocks"):
-
+	if (len(sys.argv) == 3) and (sys.argv[1] == "ps3badblocks"):
 		tStart = time.time()
 
 		data = open(sys.argv[2],"rb").read()
@@ -517,10 +489,11 @@ if __name__ == "__main__":
 			pgblock = block+block_offset
 
 			block_data=data[pgblock*(block_plus_ras_sz):(pgblock+1)*(block_plus_ras_sz)]
-			block_valid = ps3_validate_block(block_data, page_plus_ras_sz, page_sz)
+			block_valid = ps3_validate_block(block_data, page_plus_ras_sz, page_sz, block)
 			if block_valid == 0:
 				print
-				print "Invalid block: %X"%(pgblock)
+				print "Invalid block: %d (0x%X)"%(pgblock, pgblock)
+				print
 				
 			print "\r%d KB / %d KB"%(((block+1)*(block_plus_ras_sz))/1024, (nblocks*(block_plus_ras_sz))/1024),
 			sys.stdout.flush()
@@ -531,7 +504,6 @@ if __name__ == "__main__":
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
 		sys.exit(0)
 		
-	
 	n = NANDFlasher(sys.argv[1], int(sys.argv[2], 10), VERSION_MAJOR, VERSION_MINOR)
 	print "Pinging Teensy..."
 	freeram = n.ping()
@@ -596,11 +568,8 @@ if __name__ == "__main__":
 	elif len(sys.argv) == 6 and (sys.argv[3] == "diffwrite" or sys.argv[3] == "vdiffwrite"):
 		n.printstate()
 		print
-		
 		print "Writing using diff file ..."
-		
 		sys.stdout.flush()
-
 		print
 		
 		data = open(sys.argv[4],"rb").read()
@@ -629,17 +598,10 @@ if __name__ == "__main__":
 		print
 		print "Done. [%s]"%(datetime.timedelta(seconds=time.time() - tStart))
 		
-	elif len(sys.argv) == 4 and sys.argv[3] == "release":
-		print
-		#n.trist = 0
-	#	n.setports(0)
-		print "NAND Released"
 	elif len(sys.argv) == 4 and sys.argv[3] == "bootloader":
 		print
 		print "Entering Teensy's bootloader mode... Goodbye!"
 		n.bootloader()
-	#	n.closedevice()
 		sys.exit(0)
 
 	n.ping()
-	#n.closedevice()

@@ -31,3 +31,9 @@ v0.62
 -----
 + Bugfix: wrong RAS size for Hynix HY27US08281A
 + "Bad Blocks" won't be skipped anymore while writing
+
+v0.63
+-----
++ Bugfix: dumping didn't work for all Hynix NANDs except HY27US08281A
++ Added support for Hynix H27U4G8F2D (Wii mini)
++ Removed reporting of bad blocks during dumping (use "ps3badblocks" command afterwards)
