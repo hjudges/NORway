@@ -251,7 +251,7 @@ class NANDFlasher(TeensySerial):
 			elif (res == 86): #'V'
 				error_msg = "Verification error!"
 			elif (res == 80): #'P'
-				error_msg = "Device is write-ptotected!"
+				error_msg = "Device is write-protected!"
 			else:
 				self.close()
 				raise NANDError("Received unknown error! (Got 0x%02x)"%res)

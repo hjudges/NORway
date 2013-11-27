@@ -21,3 +21,12 @@ NORway/default/usb_serial.d
 NORway/default/usb_serial.o
 NORway/NORway.atsuo
 TcfTransactionLog.csv
+SPIway/Release/makedep.mk
+SPIway/Release/Makefile
+SPIway/Release/SPIway.d
+SPIway/Release/SPIway.elf
+SPIway/Release/SPIway.map
+SPIway/Release/usb_serial.d
+SPIway/Release/usb_serial.o
+SPIway/Release/SPIway.o
+SPIway/SPIway.atsuo
