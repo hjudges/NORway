@@ -1,0 +1,13 @@
+SPIway - Teensy++ 2.0 SPI flasher for PS4 (judges@eEcho.com)
+------------------------------------------------------------
+
+v0.10
+-----
++ Initial release
++ Support for Macronix MX25L25635F
+
+v0.20
+-----
++ Added README
++ Added support for Macronix MX25L1006E
++ Added support for Winbond W25X10CL

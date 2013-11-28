@@ -70,6 +70,7 @@ class SPIFlasher(TeensySerial):
 	SPI_BLOCK_COUNT = 0
 	SPI_SECTORS_PER_BLOCK = 0
 	SPI_BLOCK_SIZE = 0
+	SPI_ADDRESS_LENGTH = 0
 
 	# Teensy commands
 	CMD_PING1 = 0
@@ -84,7 +85,9 @@ class SPIFlasher(TeensySerial):
 	CMD_SPI_WRITESECTOR = 9
 	CMD_SPI_ERASEBLOCK = 10
 	CMD_SPI_ERASECHIP = 11
-
+	CMD_SPI_3BYTE_ADDRESS = 12
+	CMD_SPI_4BYTE_ADDRESS = 13
+	
 	def __init__(self, port, ver_major, ver_minor):
 		if port:
 			TeensySerial.__init__(self, port)
@@ -120,12 +123,6 @@ class SPIFlasher(TeensySerial):
 		self.MF_ID = ord(spi_info[0])
 		self.DEVICE_ID = ord(spi_info[1])
 
-		self.SPI_BLOCK_COUNT = 512
-		self.SPI_SECTORS_PER_BLOCK = 16
-		self.SPI_SECTOR_SIZE = 0x1000
-		self.SPI_TOTAL_SECTORS = self.SPI_SECTORS_PER_BLOCK * self.SPI_BLOCK_COUNT
-		self.SPI_BLOCK_SIZE = self.SPI_SECTORS_PER_BLOCK * self.SPI_SECTOR_SIZE
-			
 	def printstate(self):
 		print "SPI information"
 		print "---------------"
@@ -135,6 +132,38 @@ class SPIFlasher(TeensySerial):
 			print "Chip manufacturer: Macronix (0x%02x)"%self.MF_ID
 			if self.DEVICE_ID == 0x18:
 				print "Chip type:         MX25L25635F (0x%02x)"%self.DEVICE_ID
+				self.SPI_BLOCK_COUNT = 512
+				self.SPI_SECTORS_PER_BLOCK = 16
+				self.SPI_SECTOR_SIZE = 0x1000
+				self.SPI_TOTAL_SECTORS = self.SPI_SECTORS_PER_BLOCK * self.SPI_BLOCK_COUNT
+				self.SPI_BLOCK_SIZE = self.SPI_SECTORS_PER_BLOCK * self.SPI_SECTOR_SIZE
+				self.SPI_ADDRESS_LENGTH = 4
+
+			elif self.DEVICE_ID == 0x10:
+				print "Chip type:         MX25L1006E (0x%02x)"%self.DEVICE_ID
+				self.SPI_BLOCK_COUNT = 2
+				self.SPI_SECTORS_PER_BLOCK = 16
+				self.SPI_SECTOR_SIZE = 0x1000
+				self.SPI_TOTAL_SECTORS = self.SPI_SECTORS_PER_BLOCK * self.SPI_BLOCK_COUNT
+				self.SPI_BLOCK_SIZE = self.SPI_SECTORS_PER_BLOCK * self.SPI_SECTOR_SIZE
+				self.SPI_ADDRESS_LENGTH = 3
+
+			else:
+				print "Chip type:         unknown (0x%02x)"%self.DEVICE_ID
+				self.close()
+				sys.exit(1)
+
+		elif self.MF_ID == 0xEF:
+			print "Chip manufacturer: Winbond (0x%02x)"%self.MF_ID
+			if self.DEVICE_ID == 0x10:
+				print "Chip type:         W25X10CL (0x%02x)"%self.DEVICE_ID
+				self.SPI_BLOCK_COUNT = 2
+				self.SPI_SECTORS_PER_BLOCK = 16
+				self.SPI_SECTOR_SIZE = 0x1000
+				self.SPI_TOTAL_SECTORS = self.SPI_SECTORS_PER_BLOCK * self.SPI_BLOCK_COUNT
+				self.SPI_BLOCK_SIZE = self.SPI_SECTORS_PER_BLOCK * self.SPI_SECTOR_SIZE
+				self.SPI_ADDRESS_LENGTH = 3
+
 			else:
 				print "Chip type:         unknown (0x%02x)"%self.DEVICE_ID
 				self.close()
@@ -146,7 +175,11 @@ class SPIFlasher(TeensySerial):
 			sys.exit(1)
 
 		print
-		print "Chip size:         %d MB"%(self.SPI_BLOCK_SIZE * self.SPI_BLOCK_COUNT / 1024 / 1024)
+		if (self.SPI_BLOCK_SIZE * self.SPI_BLOCK_COUNT / 1024) <= 8192:
+			print "Chip size:         %d KB"%(self.SPI_BLOCK_SIZE * self.SPI_BLOCK_COUNT / 1024)
+		else:
+			print "Chip size:         %d MB"%(self.SPI_BLOCK_SIZE * self.SPI_BLOCK_COUNT / 1024 / 1024)
+
 		print "Sector size:       %d bytes"%(self.SPI_SECTOR_SIZE)
 		print "Block size:        %d bytes"%(self.SPI_BLOCK_SIZE)
 		print "Sectors per block: %d"%(self.SPI_SECTORS_PER_BLOCK)
@@ -193,6 +226,11 @@ class SPIFlasher(TeensySerial):
 		return 1
 
 	def erase_block(self, block):
+		if self.SPI_ADDRESS_LENGTH == 3:
+			self.write(self.CMD_SPI_3BYTE_ADDRESS)
+		else:
+			self.write(self.CMD_SPI_4BYTE_ADDRESS)
+
 		self.write(self.CMD_SPI_ERASEBLOCK)
 
 		# set address (msb first)
@@ -209,6 +247,11 @@ class SPIFlasher(TeensySerial):
 		return 1
 
 	def readblock(self, block):
+		if self.SPI_ADDRESS_LENGTH == 3:
+			self.write(self.CMD_SPI_3BYTE_ADDRESS)
+		else:
+			self.write(self.CMD_SPI_4BYTE_ADDRESS)
+
 		self.write(self.CMD_SPI_READBLOCK)
 
 		# set address (msb first)
@@ -245,6 +288,11 @@ class SPIFlasher(TeensySerial):
 		if len(data) != self.SPI_SECTOR_SIZE:
 			print "Incorrent data size %d"%(len(data))
 			
+		if self.SPI_ADDRESS_LENGTH == 3:
+			self.write(self.CMD_SPI_3BYTE_ADDRESS)
+		else:
+			self.write(self.CMD_SPI_4BYTE_ADDRESS)
+
 		self.write(self.CMD_SPI_WRITESECTOR)
 
 		# set address (msb first)
@@ -324,7 +372,7 @@ class SPIFlasher(TeensySerial):
 
 if __name__ == "__main__":
 	VERSION_MAJOR = 0
-	VERSION_MINOR = 10
+	VERSION_MINOR = 20
 
 	print "SPIway v%d.%02d - Teensy++ 2.0 SPI Flasher for PS4"%(VERSION_MAJOR, VERSION_MINOR)
 	print "Copyright (C) 2013 judges@eEcho.com"

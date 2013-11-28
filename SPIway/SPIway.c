@@ -1,5 +1,5 @@
 /************************************************************************
-SPIway.c (v0.10) - Teensy++ 2.0 SPI Flasher for PS4
+SPIway.c (v0.20) - Teensy++ 2.0 SPI Flasher for PS4
 
 Copyright (C) 2013	judges <judges@eEcho.com>
 
@@ -14,7 +14,7 @@ see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 #include "SPI_AVR8.h"
 
 #define VERSION_MAJOR			0
-#define VERSION_MINOR			10
+#define VERSION_MINOR			20
 
 #define CPU_PRESCALE(n)	(CLKPR = 0x80, CLKPR = (n))
 
@@ -32,6 +32,8 @@ enum {
 	CMD_SPI_WRITESECTOR,
 	CMD_SPI_ERASEBLOCK,
 	CMD_SPI_ERASECHIP,
+	CMD_SPI_3BYTE_ADDRESS,
+	CMD_SPI_4BYTE_ADDRESS,
 } cmd_t;
 
 //SPI commands (69)
@@ -131,6 +133,7 @@ enum {
 #define BUF_SIZE_ADDR	4
 
 uint32_t 	SPI_BLOCK_SIZE = 0x10000; //64KB block size
+uint8_t		SPI_ADDRESS_LENGTH = 4;
 uint8_t		IO_PULLUPS = 0xFF;
 uint8_t		buf_rw[BUF_SIZE_RW];
 uint8_t		buf_addr[BUF_SIZE_ADDR];
@@ -311,10 +314,14 @@ uint8_t hwspi_read_block() {
 	cli();
 
 	HWSPI_CS_LOW;
-	SPI_SendByte(SPI_COMMAND_4B_READ);
 
+	if (SPI_ADDRESS_LENGTH == 3)
+		SPI_SendByte(SPI_COMMAND_3B_READ);
+	else
+		SPI_SendByte(SPI_COMMAND_4B_READ);
+	
 	/* address */
-	SPI_SendByte(buf_addr[0]);
+	if (SPI_ADDRESS_LENGTH == 4) SPI_SendByte(buf_addr[0]);
 	SPI_SendByte(buf_addr[1]);
 	SPI_SendByte(buf_addr[2]);
 	SPI_SendByte(buf_addr[3]);
@@ -454,11 +461,14 @@ int8_t hwspi_write_block() {
 	
 		/* Serial Data Input command */
 		HWSPI_CS_LOW;
-		SPI_SendByte(SPI_COMMAND_4B_PAGEPROG);
+		
+		if (SPI_ADDRESS_LENGTH == 3)
+			SPI_SendByte(SPI_COMMAND_3B_PAGEPROG);
+		else
+			SPI_SendByte(SPI_COMMAND_4B_PAGEPROG);
 
 		/* address */
-		//buf_addr[2] = i;
-		SPI_SendByte(buf_addr[0]);
+		if (SPI_ADDRESS_LENGTH == 4) SPI_SendByte(buf_addr[0]);
 		SPI_SendByte(buf_addr[1]);
 		SPI_SendByte(buf_addr[2] | i);
 		SPI_SendByte(buf_addr[3]);
@@ -479,8 +489,11 @@ int8_t hwspi_write_block() {
 		SPI_BUSY_WAIT;
 		
 		if (ret == -1) break;
-		if (hwspi_security() & SPI_SECURITY_P_FAIL) {
-			ret = 0;
+		
+		if ((maker_code == 0xC2) && (device_code0 == 0x18)) {
+			if (hwspi_security() & SPI_SECURITY_P_FAIL) {
+				ret = 0;
+			}
 		}
 	}
 	
@@ -563,9 +576,11 @@ int8_t hwspi_erase_chip() {
 	if ((hwspi_status() & (SPI_STATUS_BP0 | SPI_STATUS_BP1 | SPI_STATUS_BP2 | SPI_STATUS_BP3 | SPI_STATUS_SRWD))) {
 		return -1;
 	}
+
+	if ((maker_code == 0xC2) && (device_code0 == 0x18)) {
+		if (hwspi_security() & (SPI_SECURITY_E_FAIL | SPI_SECURITY_WPSEL)) return 0;
+	}
 		
-	if (hwspi_security() & (SPI_SECURITY_E_FAIL | SPI_SECURITY_WPSEL)) return 0;
-	
 	return 1;
 }
 
@@ -605,10 +620,14 @@ int8_t hwspi_erase_block() {
 
 	/* block erase setup command */
 	HWSPI_CS_LOW;
-	SPI_SendByte(SPI_COMMAND_4B_BLOCK_ERASE_64K);
-
+	
+	if (SPI_ADDRESS_LENGTH == 3)
+		SPI_SendByte(SPI_COMMAND_3B_BLOCK_ERASE_64K);
+	else
+		SPI_SendByte(SPI_COMMAND_4B_BLOCK_ERASE_64K);
+		
 	/* block address */
-	SPI_SendByte(buf_addr[0]);
+	if (SPI_ADDRESS_LENGTH == 4) SPI_SendByte(buf_addr[0]);
 	SPI_SendByte(buf_addr[1]);
 	SPI_SendByte(buf_addr[2]);
 	SPI_SendByte(buf_addr[3]);
@@ -623,9 +642,11 @@ int8_t hwspi_erase_block() {
 	if ((hwspi_status() & (SPI_STATUS_BP0 | SPI_STATUS_BP1 | SPI_STATUS_BP2 | SPI_STATUS_BP3 | SPI_STATUS_SRWD))) {
 		return -1;
 	}
-		
-	if (hwspi_security() & (SPI_SECURITY_E_FAIL | SPI_SECURITY_WPSEL)) return 0;
 	
+	if ((maker_code == 0xC2) && (device_code0 == 0x18)) {
+		if (hwspi_security() & (SPI_SECURITY_E_FAIL | SPI_SECURITY_WPSEL)) return 0;
+	}
+		
 	return 1;
 }
 
@@ -873,6 +894,14 @@ int main(void) {
 				
 			case CMD_SPI_ERASECHIP:
 				handle_erase_chip();
+				break;
+				
+			case CMD_SPI_3BYTE_ADDRESS:
+				SPI_ADDRESS_LENGTH = 3;
+				break;
+			
+			case CMD_SPI_4BYTE_ADDRESS:
+				SPI_ADDRESS_LENGTH = 4;
 				break;
 			
 			default:
