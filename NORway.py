@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # *************************************************************************
-#  NORway.py v0.6 beta
+#  NORway.py v0.7
 #
 # Teensy++ 2.0 modifications by judges@eEcho.com
 # *************************************************************************
@@ -658,7 +658,7 @@ class NORFlasher(TeensySerial):
 		return args
 
 if __name__ == "__main__":
-	print "NORway.py v0.6 beta - Teensy++ 2.0 NOR flasher for PS3 (judges@eEcho.com)"
+	print "NORway.py v0.7 - Teensy++ 2.0 NOR flasher for PS3 (judges@eEcho.com)"
 	print "(Orignal noralizer.py by Hector Martin \"marcan\" <hector@marcansoft.com>)"
 	print
 

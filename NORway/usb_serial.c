@@ -87,7 +87,7 @@
 //#define TRANSMIT_TIMEOUT	25   /* in milliseconds */
 
 //greater timeout required for OS X
-#define TRANSMIT_TIMEOUT	10000   /* in milliseconds */
+#define TRANSMIT_TIMEOUT	200   /* in milliseconds */
 
 // USB devices are supposed to implment a halt feature, which is
 // rarely (if ever) used.  If you comment this line out, the halt

@@ -88,4 +88,4 @@ v0.6
 
 v0.7
 ----
-+ Integration with NAND (from NANDWay 0.2 Beta)
++ Bugfix: changed TRANSMIT_TIMEOUT for Teensy's serial device to 200ms
