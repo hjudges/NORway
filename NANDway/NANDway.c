@@ -1,5 +1,5 @@
 /************************************************************************
-NANDway.c (v0.63) - Teensy++ 2.0 NAND Flasher for PS3/Xbox/Wii
+NANDway.c (v0.64) - Teensy++ 2.0 NAND Flasher for PS3/Xbox/Wii
 
 Copyright (C) 2013	Effleurage
 					judges <judges@eEcho.com>
@@ -15,7 +15,7 @@ see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 //#include "clz_ctz.h"
 
 #define VERSION_MAJOR			0
-#define VERSION_MINOR			63
+#define VERSION_MINOR			64
 
 #define BUILD_DUAL_NAND			1
 #define BUILD_SIGNAL_BOOSTER	2
@@ -331,6 +331,13 @@ uint8_t nand_read_id(nand_port *nandp)
 	//size_data = 0x15;
 	//plane_data = 0x40;
 	
+	//Hynix H27UBG8T2A
+	//maker_code = 0xad;
+	//device_code = 0xd7;
+	//chip_data = 0x94;
+	//size_data = 0x9a;
+	//plane_data = 0x74;
+
 	nandp->info.raw_data[0] = maker_code;
 	nandp->info.raw_data[1] = device_code;
 	nandp->info.raw_data[2] = chip_data;
@@ -457,7 +464,7 @@ uint8_t nand_read_id(nand_port *nandp)
 		}
 	}
 
-	nandp->info.num_blocks = nandp->info.num_planes * nandp->info.plane_size / nandp->info.block_size;
+	nandp->info.num_blocks = (uint32_t)nandp->info.num_planes * (nandp->info.plane_size / nandp->info.block_size);
 	nandp->info.pages_per_block = nandp->info.block_size / nandp->info.page_size;
 	//nandp->info.block_shift = ctz(nandp->info.pages_per_block);
 

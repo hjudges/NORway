@@ -423,7 +423,7 @@ def ps3_validate_block(block_data, page_plus_ras_sz, page_sz, blocknr):
 
 if __name__ == "__main__":
 	VERSION_MAJOR = 0
-	VERSION_MINOR = 63
+	VERSION_MINOR = 64
 
 	print "NANDway v%d.%02d - Teensy++ 2.0 NAND Flasher for PS3/Xbox/Wii"%(VERSION_MAJOR, VERSION_MINOR)
 	print "(Orignal NORway.py by judges <judges@eEcho.com>)"
