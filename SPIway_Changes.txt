@@ -11,3 +11,7 @@ v0.20
 + Added README
 + Added support for Macronix MX25L1006E
 + Added support for Winbond W25X10CL
+
+v0.30
+-----
++ Added support for Winbond W25Q80BV (thx to "Socketz"!)

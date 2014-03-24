@@ -163,6 +163,14 @@ class SPIFlasher(TeensySerial):
 				self.SPI_TOTAL_SECTORS = self.SPI_SECTORS_PER_BLOCK * self.SPI_BLOCK_COUNT
 				self.SPI_BLOCK_SIZE = self.SPI_SECTORS_PER_BLOCK * self.SPI_SECTOR_SIZE
 				self.SPI_ADDRESS_LENGTH = 3
+			elif self.DEVICE_ID == 0x13:
+				print "Chip type:         W25Q80BV (0x%13x)"%self.DEVICE_ID
+				self.SPI_BLOCK_COUNT = 16
+				self.SPI_SECTORS_PER_BLOCK = 16
+				self.SPI_SECTOR_SIZE = 0x1000
+				self.SPI_TOTAL_SECTORS = self.SPI_SECTORS_PER_BLOCK * self.SPI_BLOCK_COUNT
+				self.SPI_BLOCK_SIZE = self.SPI_SECTORS_PER_BLOCK * self.SPI_SECTOR_SIZE
+				self.SPI_ADDRESS_LENGTH = 3
 
 			else:
 				print "Chip type:         unknown (0x%02x)"%self.DEVICE_ID
@@ -372,7 +380,7 @@ class SPIFlasher(TeensySerial):
 
 if __name__ == "__main__":
 	VERSION_MAJOR = 0
-	VERSION_MINOR = 20
+	VERSION_MINOR = 30
 
 	print "SPIway v%d.%02d - Teensy++ 2.0 SPI Flasher for PS4"%(VERSION_MAJOR, VERSION_MINOR)
 	print "Copyright (C) 2013 judges@eEcho.com"

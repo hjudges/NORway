@@ -14,7 +14,7 @@ see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 #include "SPI_AVR8.h"
 
 #define VERSION_MAJOR			0
-#define VERSION_MINOR			20
+#define VERSION_MINOR			30
 
 #define CPU_PRESCALE(n)	(CLKPR = 0x80, CLKPR = (n))
 
