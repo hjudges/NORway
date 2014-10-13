@@ -159,9 +159,17 @@ it should also work on Linux and OSX, but I didn't test. If you're running Linux
 Serial drivers are not required for Linux/OSX.
 
 Thanks to "marcan" for the original implementation.
+
+Thanks to "baileyscream" for his "Ultimate Fool Proof Guide: Ps3 Hardware Downgrading"!
+	http://www.ps3hax.net/showthread.php?t=39766
+
+Thanks to "xanadu247" for his "GUIDE to self powering TEENSY 2.0++/ 360Clip (NOR)"!
+	http://www.ps3hax.net/showthread.php?t=78378
+
 Thanks to "CrackMyDay" for code optimizations and his Samsung tutorial!
 	check this out if you run into troubles (last resort):
 	http://www.ps3hax.net/showthread.php?p=284070#post284070
+
 Thanks to everyone else for contributing and beta testing!
 
  -- judges (judges@eEcho.com)
