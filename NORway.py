@@ -659,7 +659,7 @@ class NORFlasher(TeensySerial):
 
 if __name__ == "__main__":
 	print "NORway.py v0.7 - Teensy++ 2.0 NOR flasher for PS3 (judges@eEcho.com)"
-	print "(Orignal noralizer.py by Hector Martin \"marcan\" <hector@marcansoft.com>)"
+	print "(Original noralizer.py by Hector Martin \"marcan\" <hector@marcansoft.com>)"
 	print
 
 	if len(sys.argv) == 1:

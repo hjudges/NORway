@@ -426,8 +426,8 @@ if __name__ == "__main__":
 	VERSION_MINOR = 64
 
 	print "NANDway v%d.%02d - Teensy++ 2.0 NAND Flasher for PS3/Xbox/Wii"%(VERSION_MAJOR, VERSION_MINOR)
-	print "(Orignal NORway.py by judges <judges@eEcho.com>)"
-	print "(Orignal noralizer.py by Hector Martin \"marcan\" <hector@marcansoft.com>)"
+	print "(Original NORway.py by judges <judges@eEcho.com>)"
+	print "(Original noralizer.py by Hector Martin \"marcan\" <hector@marcansoft.com>)"
 	print
 
 	if len(sys.argv) == 1:
