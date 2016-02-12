@@ -30,3 +30,5 @@ SPIway/Release/usb_serial.d
 SPIway/Release/usb_serial.o
 SPIway/Release/SPIway.o
 SPIway/SPIway.atsuo
+NANDway/Dual NAND Edition/NANDway_DualNANDEdition.srec
+NANDway/Signal Booster Edition/NANDway_SignalBoosterEdition.srec

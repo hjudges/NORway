@@ -194,6 +194,10 @@ class NANDFlasher(TeensySerial):
 				print "NAND chip type:         K9GAG08U0M (0x%02x)"%self.DEVICE_ID
 			elif self.DEVICE_ID == 0xF1:
 				print "NAND chip type:         K9F1G08U0A (0x%02x)"%self.DEVICE_ID
+			elif self.DEVICE_ID == 0x79:
+				print "NAND chip type:         K9T1G08U0M (0x%02x)"%self.DEVICE_ID
+			elif self.DEVICE_ID == 0xDA:
+				print "NAND chip type:         K9F2G08U0M (0x%02x)"%self.DEVICE_ID
 			else:
 				print "NAND chip type:         unknown (0x%02x)"%self.DEVICE_ID
 		elif self.MF_ID == 0xAD:
@@ -423,7 +427,7 @@ def ps3_validate_block(block_data, page_plus_ras_sz, page_sz, blocknr):
 
 if __name__ == "__main__":
 	VERSION_MAJOR = 0
-	VERSION_MINOR = 64
+	VERSION_MINOR = 65
 
 	print "NANDway v%d.%02d - Teensy++ 2.0 NAND Flasher for PS3/Xbox/Wii"%(VERSION_MAJOR, VERSION_MINOR)
 	print "(Original NORway.py by judges <judges@eEcho.com>)"

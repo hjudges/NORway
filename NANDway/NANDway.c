@@ -15,7 +15,7 @@ see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 //#include "clz_ctz.h"
 
 #define VERSION_MAJOR			0
-#define VERSION_MINOR			64
+#define VERSION_MINOR			65
 
 #define BUILD_DUAL_NAND			1
 #define BUILD_SIGNAL_BOOSTER	2
@@ -325,11 +325,26 @@ uint8_t nand_read_id(nand_port *nandp)
 	NAND_IO_READ(nandp, size_data);
 	NAND_IO_READ(nandp, plane_data);
 	
+	//Samsung K9F1G08R0A
 	//maker_code = 0xec;
 	//device_code = 0xf1;
 	//chip_data = 0xa0;
 	//size_data = 0x15;
 	//plane_data = 0x40;
+	
+	//Samsung K9T1G08U0M
+	//maker_code = 0xec;
+	//device_code = 0x79;
+	//chip_data = 0xa5;
+	//size_data = 0xc0;
+	//plane_data = 0x00; /??
+	
+	//Samsung K9F2G08U0M
+	//maker_code = 0xec;
+	//device_code = 0xda;
+	//chip_data = 0xa0; //??
+	//size_data = 0x15;
+	//plane_data = 0x50;
 	
 	//Hynix H27UBG8T2A
 	//maker_code = 0xad;
@@ -403,12 +418,22 @@ uint8_t nand_read_id(nand_port *nandp)
 		nandp->info.plane_size = 1UL << 24;
 		nandp->info.bus_width = 8;
 	}
+	else if ((maker_code == 0xEC) && (device_code == 0x79)) { // Samsung K9T1G08U0M
+		nandp->info.page_size  = 512;
+		nandp->info.block_size = 32UL * nandp->info.page_size;
+		nandp->info.num_planes = 4;
+		nandp->info.oob_size = 16;
+		nandp->info.plane_size = 1UL << 25;
+		nandp->info.bus_width = 8;
+	}
 	else {
 		if ((maker_code == 0xEC) && (device_code == 0xF1)) // Samsung K9F1G08U0A
 			plane_data = 0x40;
 		else if ((maker_code == 0xEC) && (device_code == 0xA1)) // Samsung K9F1G08R0A
 			plane_data = 0x40;
-		
+		else if ((maker_code == 0xEC) && (device_code == 0xDA)) // Samsung K9F2G08U0M
+			plane_data = 0x50;
+
 		/* Fill the NAND structure parameters */
 		nandp->info.page_size  = 0x400 << (size_data & 0x03);
 		//nandp->info.page_shift = ctz(nandp->info.page_size);
@@ -489,6 +514,12 @@ uint8_t nand_read_page(nand_port *nandp) {
 		NAND_IO_SET(nandp, buf_addr[0]);
 		NAND_IO_SET(nandp, buf_addr[1]);
 	}
+	else if ((nandp->info.maker_code == 0xEC) && (nandp->info.device_code == 0x79)) { // Samsung K9T1G08U0M
+		NAND_IO_SET(nandp, 0);
+		NAND_IO_SET(nandp, buf_addr[0]);
+		NAND_IO_SET(nandp, buf_addr[1]);
+		NAND_IO_SET(nandp, buf_addr[2]);
+	}
 	else {
 		NAND_IO_SET(nandp, 0);
 		NAND_IO_SET(nandp, 0);
@@ -499,6 +530,8 @@ uint8_t nand_read_page(nand_port *nandp) {
 	NAND_ALE_LOW(nandp);
 
 	if ((nandp->info.maker_code == 0xAD) && (nandp->info.device_code == 0x73))
+		_delay_ns(100);
+	else if ((nandp->info.maker_code == 0xEC) && (nandp->info.device_code == 0x79)) // Samsung K9T1G08U0M
 		_delay_ns(100);
 	else
 		NAND_COMMAND(nandp, NAND_COMMAND_READ2);
@@ -562,6 +595,12 @@ int8_t nand_write_page(nand_port *nandp) {
 		NAND_IO_SET(nandp, 0);
 		NAND_IO_SET(nandp, buf_addr[0]);
 		NAND_IO_SET(nandp, buf_addr[1]);
+	}
+	else if ((nandp->info.maker_code == 0xEC) && (nandp->info.device_code == 0x79)) { // Samsung K9T1G08U0M
+		NAND_IO_SET(nandp, 0);
+		NAND_IO_SET(nandp, buf_addr[0]);
+		NAND_IO_SET(nandp, buf_addr[1]);
+		NAND_IO_SET(nandp, buf_addr[2]);
 	}
 	else {
 		NAND_IO_SET(nandp, 0);

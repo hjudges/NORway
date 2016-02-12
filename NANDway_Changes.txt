@@ -41,3 +41,7 @@ v0.63
 v0.64
 -----
 + Bugfix: corrected block count calculation
+
+v0.65
+-----
++ Added support for Samsung K9T1G08U0M and Samsung K9F2G08U0M (DECR-1000)
