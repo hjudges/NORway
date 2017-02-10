@@ -89,3 +89,7 @@ v0.6
 v0.7
 ----
 + Bugfix: changed TRANSMIT_TIMEOUT for Teensy's serial device to 200ms
+
+v0.8
+----
++ Added light show for "sandungas" :P (connect a LED to pin B7)

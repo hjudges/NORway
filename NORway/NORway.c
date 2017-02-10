@@ -6,7 +6,7 @@ Copyright (C) 2010-2011  Hector Martin "marcan" <hector@marcansoft.com>
 This code is licensed to you under the terms of the GNU GPL, version 2;
 see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 *************************************************************************
- NORway.c (v0.7) - Teensy++ 2.0 port by judges@eEcho.com
+ NORway.c (v0.8) - Teensy++ 2.0 port by judges@eEcho.com
 *************************************************************************/
 
 #include <avr/io.h>
@@ -71,6 +71,8 @@ see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 #define BSS_128		0x20000	//64Kwords = 128KB
 #define BSS_WORD	0x00002	//word = 2Bytes
 
+//#define sbi(sfr, bit)				(_SFR_BYTE(sfr) |= _BV(bit))
+#define SET_LED_BRIGHTNESS(bvalue)	OCR1C = bvalue; (_SFR_BYTE(TCCR1A) |= _BV(COM1C1))
 
 void put_address(uint8_t address3, uint8_t address2, uint8_t address1) {
 	//CONT_PORT |= (1<<CONT_CE); //HIGH
@@ -146,6 +148,10 @@ uint8_t state_waiting2(uint8_t do_increment)
 				addr_increment(1);
 			break;
 		}
+		SET_LED_BRIGHTNESS(255);
+		_delay_ms(50);
+		SET_LED_BRIGHTNESS(0);
+		_delay_ms(50);
 /*		else {
 			//_delay_us(5);
 			DATA1_DDR = DATA2_DDR = 0x00; // set for input
@@ -286,6 +292,84 @@ void releaseports()
 	//CONT_PORT |= (1<<CONT_TRI); //HIGH
 }
 
+void flash_led(uint8_t count)
+{
+	for (uint8_t i=0; i<count; i++)
+	{
+		SET_LED_BRIGHTNESS(255);
+		_delay_ms(100);
+
+		SET_LED_BRIGHTNESS(0);
+		_delay_ms(100);
+	}
+}
+
+void fade_led()
+{
+	DDRB |= (1<<7); //pin B7 is output
+	
+	for (int i=0; i<256; i+=5)
+	{
+		SET_LED_BRIGHTNESS(i);
+		_delay_ms(10);
+
+		if (usb_configured()) {
+			//configure all i/o lines (and set tristate=low)
+			initports();
+			flash_led(5);
+			return;
+		}
+	}
+
+	for (int i=255; i>=0; i-=5)
+	{
+		SET_LED_BRIGHTNESS(i);
+		_delay_ms(10);
+
+		if (usb_configured()) {
+			//configure all i/o lines (and set tristate=low)
+			initports();
+			flash_led(5);
+			return;
+		}
+	}
+
+	//_delay_ms(100);
+}
+
+int16_t fade_led_wait_for_cmd(void)
+{
+	int16_t in_data;
+
+	DDRB |= (1<<7); //pin B7 is output
+	
+	for (int i=0; i<256; i+=5)
+	{
+		SET_LED_BRIGHTNESS(i);
+		_delay_ms(5);
+
+		if ((in_data = usb_serial_getchar()) != -1) {
+			SET_LED_BRIGHTNESS(0);
+			return in_data;
+		}
+	}
+
+	for (int i=255; i>=0; i-=5)
+	{
+		SET_LED_BRIGHTNESS(i);
+		_delay_ms(5);
+
+		if ((in_data = usb_serial_getchar()) != -1) {
+			SET_LED_BRIGHTNESS(0);
+			return in_data;
+		}
+	}
+
+	//_delay_ms(100);
+	
+	return -1;
+}
+
 int main(void)
 {
 	int16_t in_data;
@@ -295,7 +379,8 @@ int main(void)
 	uint8_t state, cycle, tx_data, tx_wr, buf_ix, do_increment, do_verify, offset_2nddie;
 	uint8_t buf_read[64];
 	uint8_t buf_write[BSS_4];
-
+	uint8_t led_state = 0;
+	
 	// set for 8 MHz clock
 	CPU_PRESCALE(1);
 	// set for 16 MHz clock
@@ -305,6 +390,13 @@ int main(void)
 	MCUCR = (1<<JTD) | (1<<IVCE) | (0<<PUD);
 	MCUCR = (1<<JTD) | (0<<IVSEL) | (0<<IVCE) | (0<<PUD);
 
+	//setup pin B7 as pwm
+	cli();
+	// timer 1, 8 bit phase correct pwm
+	TCCR1A = (1<<WGM10);
+	TCCR1B = (1<<CS11);			// div 8 prescaler
+	sei();
+
 	//set all i/o lines to input
 	releaseports();
 
@@ -312,14 +404,17 @@ int main(void)
 	// If the Teensy is powered without a PC connected to the USB port,
 	// this will wait forever.
 	usb_init();
-	while (!usb_configured()) /* wait */ ;
+	while (!usb_configured()) //wait
+	{
+		fade_led();
+	}
 
 	//configure all i/o lines (and set tristate=low)
-	initports();
+	//initports();
 
 	// Wait an extra second for the PC's operating system to load drivers
 	// and do whatever it does to actually be ready for input
-	_delay_ms(1000);
+	//_delay_ms(1000);
 
 	state = S_IDLE;
 	bss = BSS_128;
@@ -327,6 +422,7 @@ int main(void)
 	
 	ADDR1 = ADDR2 = ADDR3 = 0;
 
+	
 	while (1) {
 		// wait for the user to run client app
 		// which sets DTR to indicate it is ready to receive.
@@ -342,7 +438,7 @@ int main(void)
 			tx_wr = 0;
 			switch (state) {
 			case S_IDLE:
-				if ((in_data = usb_serial_getchar()) != -1) {
+				if ((in_data = fade_led_wait_for_cmd()) != -1) {
 					// command
 					if (in_data == 0) {				//8'b00000000: NOP
 					}
@@ -476,6 +572,9 @@ int main(void)
 				break;
 
 			case S_READING:
+				led_state ^= 255;
+				SET_LED_BRIGHTNESS(led_state);
+				
 				if (bss == BSS_WORD) {
 					CONT_PORT &= ~(1<<CONT_OE); //LOW
 					_delay_ns(100); //better safe than sorry
@@ -530,6 +629,9 @@ int main(void)
 			case S_WRITEWORD: //"single word program mode"
 				state = S_IDLE;
 
+				led_state ^= 255;
+				SET_LED_BRIGHTNESS(led_state);
+				
 				for (i = 0; i < BSS_4; i++) {	//receive buffer data
 					if ((in_data = usb_serial_getchar()) != -1)
 						buf_write[i] = in_data;
@@ -583,6 +685,9 @@ int main(void)
 			case S_WRITEWORDUBM: //"single word unlock bypass mode"
 				state = S_IDLE;
 
+				led_state ^= 255;
+				SET_LED_BRIGHTNESS(led_state);
+				
 				for (i = 0; i < BSS_4; i++) {	//receive buffer data
 					if ((in_data = usb_serial_getchar()) != -1)
 						buf_write[i] = in_data;
@@ -646,6 +751,9 @@ int main(void)
 			case S_WRITEWBP: //"write buffer programming"
 				state = S_IDLE;
 
+				led_state ^= 255;
+				SET_LED_BRIGHTNESS(led_state);
+				
 				for (i = 0; i < BSS_4; i++) {	//receive buffer data
 					if ((in_data = usb_serial_getchar()) != -1)
 						buf_write[i] = in_data;
@@ -714,7 +822,9 @@ int main(void)
 				
 			if (tx_wr == 1) {
 				usb_serial_putchar(tx_data);
-			}				
+			}
+			
+			SET_LED_BRIGHTNESS(0);
 		}		
 	}
 }
