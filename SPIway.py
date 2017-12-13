@@ -1,7 +1,7 @@
 # *************************************************************************
 # SPIway.py - Teensy++ 2.0 SPI flasher for PS4
 #
-# Copyright (C) 2013 judges@eEcho.com
+# Copyright (C) 2017 judges@eEcho.com
 #
 # This code is licensed to you under the terms of the GNU GPL, version 2;
 # see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
@@ -164,13 +164,21 @@ class SPIFlasher(TeensySerial):
 				self.SPI_BLOCK_SIZE = self.SPI_SECTORS_PER_BLOCK * self.SPI_SECTOR_SIZE
 				self.SPI_ADDRESS_LENGTH = 3
 			elif self.DEVICE_ID == 0x13:
-				print "Chip type:         W25Q80BV (0x%13x)"%self.DEVICE_ID
+				print "Chip type:         W25Q80BV (0x%02x)"%self.DEVICE_ID
 				self.SPI_BLOCK_COUNT = 16
 				self.SPI_SECTORS_PER_BLOCK = 16
 				self.SPI_SECTOR_SIZE = 0x1000
 				self.SPI_TOTAL_SECTORS = self.SPI_SECTORS_PER_BLOCK * self.SPI_BLOCK_COUNT
 				self.SPI_BLOCK_SIZE = self.SPI_SECTORS_PER_BLOCK * self.SPI_SECTOR_SIZE
 				self.SPI_ADDRESS_LENGTH = 3
+			elif self.DEVICE_ID == 0x18:
+				print "Chip type:         W25Q256FV (0x%02x)"%self.DEVICE_ID
+				self.SPI_BLOCK_COUNT = 512
+				self.SPI_SECTORS_PER_BLOCK = 16
+				self.SPI_SECTOR_SIZE = 0x1000
+				self.SPI_TOTAL_SECTORS = self.SPI_SECTORS_PER_BLOCK * self.SPI_BLOCK_COUNT
+				self.SPI_BLOCK_SIZE = self.SPI_SECTORS_PER_BLOCK * self.SPI_SECTOR_SIZE
+				self.SPI_ADDRESS_LENGTH = 4
 
 			else:
 				print "Chip type:         unknown (0x%02x)"%self.DEVICE_ID
@@ -380,10 +388,10 @@ class SPIFlasher(TeensySerial):
 
 if __name__ == "__main__":
 	VERSION_MAJOR = 0
-	VERSION_MINOR = 30
+	VERSION_MINOR = 40
 
 	print "SPIway v%d.%02d - Teensy++ 2.0 SPI Flasher for PS4"%(VERSION_MAJOR, VERSION_MINOR)
-	print "Copyright (C) 2013 judges@eEcho.com"
+	print "Copyright (C) 2017 judges@eEcho.com"
 	print
 
 	if len(sys.argv) == 1:

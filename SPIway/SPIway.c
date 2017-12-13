@@ -1,7 +1,7 @@
 /************************************************************************
-SPIway.c (v0.20) - Teensy++ 2.0 SPI Flasher for PS4
+SPIway.c (v0.40) - Teensy++ 2.0 SPI Flasher for PS4
 
-Copyright (C) 2013	judges <judges@eEcho.com>
+Copyright (C) 2017	judges <judges@eEcho.com>
 
 This code is licensed to you under the terms of the GNU GPL, version 2;
 see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
@@ -14,7 +14,7 @@ see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 #include "SPI_AVR8.h"
 
 #define VERSION_MAJOR			0
-#define VERSION_MINOR			30
+#define VERSION_MINOR			40
 
 #define CPU_PRESCALE(n)	(CLKPR = 0x80, CLKPR = (n))
 

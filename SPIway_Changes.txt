@@ -15,3 +15,7 @@ v0.20
 v0.30
 -----
 + Added support for Winbond W25Q80BV (thx to "Socketz"!)
+
+v0.40
+-----
++ Added support for Winbond W25Q256FV

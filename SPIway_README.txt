@@ -1,4 +1,4 @@
-SPIway v0.20 - Teensy++ 2.0 SPI Flasher
+SPIway v0.40 - Teensy++ 2.0 SPI Flasher
 
 Disclaimer
 ----------
