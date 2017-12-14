@@ -34,6 +34,8 @@ enum {
 	CMD_SPI_ERASECHIP,
 	CMD_SPI_3BYTE_ADDRESS,
 	CMD_SPI_4BYTE_ADDRESS,
+	CMD_SPI_3BYTE_CMDS,
+	CMD_SPI_4BYTE_CMDS,
 } cmd_t;
 
 //SPI commands (69)
@@ -134,6 +136,7 @@ enum {
 
 uint32_t 	SPI_BLOCK_SIZE = 0x10000; //64KB block size
 uint8_t		SPI_ADDRESS_LENGTH = 4;
+uint8_t		SPI_USE_3B_CMDS = 0;
 uint8_t		IO_PULLUPS = 0xFF;
 uint8_t		buf_rw[BUF_SIZE_RW];
 uint8_t		buf_addr[BUF_SIZE_ADDR];
@@ -309,13 +312,19 @@ uint8_t hwspi_read_block() {
 	uint16_t i;
 	uint8_t sreg;
 	
+	if (SPI_USE_3B_CMDS && SPI_ADDRESS_LENGTH == 4) {
+		HWSPI_CS_LOW;
+		SPI_SendByte(SPI_COMMAND_EN4B);
+		HWSPI_CS_HIGH;
+	}
+
 	/* Save global interrupt flag and disable interrupts */
 	sreg = SREG;
 	cli();
 
 	HWSPI_CS_LOW;
 
-	if (SPI_ADDRESS_LENGTH == 3)
+	if (SPI_USE_3B_CMDS || SPI_ADDRESS_LENGTH == 3)
 		SPI_SendByte(SPI_COMMAND_3B_READ);
 	else
 		SPI_SendByte(SPI_COMMAND_4B_READ);
@@ -453,6 +462,12 @@ int8_t hwspi_write_block() {
 	int16_t in_data;
 	int8_t ret = 1;
 
+	if (SPI_USE_3B_CMDS && SPI_ADDRESS_LENGTH == 4) {
+		HWSPI_CS_LOW;
+		SPI_SendByte(SPI_COMMAND_EN4B);
+		HWSPI_CS_HIGH;
+	}
+
 	HWSPI_WP_HIGH;
 	
 	for (i = 0; i < BUF_SIZE_RW/256; ++i) {
@@ -462,7 +477,7 @@ int8_t hwspi_write_block() {
 		/* Serial Data Input command */
 		HWSPI_CS_LOW;
 		
-		if (SPI_ADDRESS_LENGTH == 3)
+		if (SPI_USE_3B_CMDS || SPI_ADDRESS_LENGTH == 3)
 			SPI_SendByte(SPI_COMMAND_3B_PAGEPROG);
 		else
 			SPI_SendByte(SPI_COMMAND_4B_PAGEPROG);
@@ -613,6 +628,12 @@ int8_t spi_erase_chip() {
 }
 
 int8_t hwspi_erase_block() {
+	if (SPI_USE_3B_CMDS && SPI_ADDRESS_LENGTH == 4) {
+		HWSPI_CS_LOW;
+		SPI_SendByte(SPI_COMMAND_EN4B);
+		HWSPI_CS_HIGH;
+	}
+
 	HWSPI_WP_HIGH;
 
 	// set write enable bit
@@ -621,7 +642,7 @@ int8_t hwspi_erase_block() {
 	/* block erase setup command */
 	HWSPI_CS_LOW;
 	
-	if (SPI_ADDRESS_LENGTH == 3)
+	if (SPI_USE_3B_CMDS || SPI_ADDRESS_LENGTH == 3)
 		SPI_SendByte(SPI_COMMAND_3B_BLOCK_ERASE_64K);
 	else
 		SPI_SendByte(SPI_COMMAND_4B_BLOCK_ERASE_64K);
@@ -902,6 +923,14 @@ int main(void) {
 			
 			case CMD_SPI_4BYTE_ADDRESS:
 				SPI_ADDRESS_LENGTH = 4;
+				break;
+			
+			case CMD_SPI_3BYTE_CMDS:
+				SPI_USE_3B_CMDS = 1;
+				break;
+			
+			case CMD_SPI_4BYTE_CMDS:
+				SPI_USE_3B_CMDS = 0;
 				break;
 			
 			default:

@@ -71,6 +71,7 @@ class SPIFlasher(TeensySerial):
 	SPI_SECTORS_PER_BLOCK = 0
 	SPI_BLOCK_SIZE = 0
 	SPI_ADDRESS_LENGTH = 0
+	SPI_USE_3BYTE_CMDS = 0
 
 	# Teensy commands
 	CMD_PING1 = 0
@@ -87,6 +88,8 @@ class SPIFlasher(TeensySerial):
 	CMD_SPI_ERASECHIP = 11
 	CMD_SPI_3BYTE_ADDRESS = 12
 	CMD_SPI_4BYTE_ADDRESS = 13
+	CMD_SPI_3BYTE_CMDS = 14
+	CMD_SPI_4BYTE_CMDS = 15
 	
 	def __init__(self, port, ver_major, ver_minor):
 		if port:
@@ -138,6 +141,7 @@ class SPIFlasher(TeensySerial):
 				self.SPI_TOTAL_SECTORS = self.SPI_SECTORS_PER_BLOCK * self.SPI_BLOCK_COUNT
 				self.SPI_BLOCK_SIZE = self.SPI_SECTORS_PER_BLOCK * self.SPI_SECTOR_SIZE
 				self.SPI_ADDRESS_LENGTH = 4
+				self.SPI_USE_3BYTE_CMDS = 0
 
 			elif self.DEVICE_ID == 0x10:
 				print "Chip type:         MX25L1006E (0x%02x)"%self.DEVICE_ID
@@ -147,6 +151,7 @@ class SPIFlasher(TeensySerial):
 				self.SPI_TOTAL_SECTORS = self.SPI_SECTORS_PER_BLOCK * self.SPI_BLOCK_COUNT
 				self.SPI_BLOCK_SIZE = self.SPI_SECTORS_PER_BLOCK * self.SPI_SECTOR_SIZE
 				self.SPI_ADDRESS_LENGTH = 3
+				self.SPI_USE_3BYTE_CMDS = 0
 
 			else:
 				print "Chip type:         unknown (0x%02x)"%self.DEVICE_ID
@@ -163,6 +168,7 @@ class SPIFlasher(TeensySerial):
 				self.SPI_TOTAL_SECTORS = self.SPI_SECTORS_PER_BLOCK * self.SPI_BLOCK_COUNT
 				self.SPI_BLOCK_SIZE = self.SPI_SECTORS_PER_BLOCK * self.SPI_SECTOR_SIZE
 				self.SPI_ADDRESS_LENGTH = 3
+				self.SPI_USE_3BYTE_CMDS = 0
 			elif self.DEVICE_ID == 0x13:
 				print "Chip type:         W25Q80BV (0x%02x)"%self.DEVICE_ID
 				self.SPI_BLOCK_COUNT = 16
@@ -171,6 +177,7 @@ class SPIFlasher(TeensySerial):
 				self.SPI_TOTAL_SECTORS = self.SPI_SECTORS_PER_BLOCK * self.SPI_BLOCK_COUNT
 				self.SPI_BLOCK_SIZE = self.SPI_SECTORS_PER_BLOCK * self.SPI_SECTOR_SIZE
 				self.SPI_ADDRESS_LENGTH = 3
+				self.SPI_USE_3BYTE_CMDS = 0
 			elif self.DEVICE_ID == 0x18:
 				print "Chip type:         W25Q256FV (0x%02x)"%self.DEVICE_ID
 				self.SPI_BLOCK_COUNT = 512
@@ -179,6 +186,7 @@ class SPIFlasher(TeensySerial):
 				self.SPI_TOTAL_SECTORS = self.SPI_SECTORS_PER_BLOCK * self.SPI_BLOCK_COUNT
 				self.SPI_BLOCK_SIZE = self.SPI_SECTORS_PER_BLOCK * self.SPI_SECTOR_SIZE
 				self.SPI_ADDRESS_LENGTH = 4
+				self.SPI_USE_3BYTE_CMDS = 1
 
 			else:
 				print "Chip type:         unknown (0x%02x)"%self.DEVICE_ID
@@ -247,6 +255,11 @@ class SPIFlasher(TeensySerial):
 		else:
 			self.write(self.CMD_SPI_4BYTE_ADDRESS)
 
+		if self.SPI_USE_3BYTE_CMDS == 0:
+			self.write(self.CMD_SPI_4BYTE_CMDS)
+		else:
+			self.write(self.CMD_SPI_3BYTE_CMDS)
+
 		self.write(self.CMD_SPI_ERASEBLOCK)
 
 		# set address (msb first)
@@ -267,6 +280,11 @@ class SPIFlasher(TeensySerial):
 			self.write(self.CMD_SPI_3BYTE_ADDRESS)
 		else:
 			self.write(self.CMD_SPI_4BYTE_ADDRESS)
+
+		if self.SPI_USE_3BYTE_CMDS == 0:
+			self.write(self.CMD_SPI_4BYTE_CMDS)
+		else:
+			self.write(self.CMD_SPI_3BYTE_CMDS)
 
 		self.write(self.CMD_SPI_READBLOCK)
 
@@ -308,6 +326,11 @@ class SPIFlasher(TeensySerial):
 			self.write(self.CMD_SPI_3BYTE_ADDRESS)
 		else:
 			self.write(self.CMD_SPI_4BYTE_ADDRESS)
+
+		if self.SPI_USE_3BYTE_CMDS == 0:
+			self.write(self.CMD_SPI_4BYTE_CMDS)
+		else:
+			self.write(self.CMD_SPI_3BYTE_CMDS)
 
 		self.write(self.CMD_SPI_WRITESECTOR)
 
