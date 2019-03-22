@@ -22,7 +22,7 @@ class TeensySerial(object):
 	BUFSIZE = 32768
 
 	def __init__(self, port):
-		self.ser = serial.Serial(port, 9600, timeout=300, rtscts=False, dsrdtr=False, xonxoff=False, writeTimeout=120)
+		self.ser = serial.Serial(port, 9600, timeout=300, rtscts=False, dsrdtr=False, xonxoff=False, write_timeout=120)
 		if self.ser is None:
 			raise TeensySerialError("could not open serial %s")%port
 		self.ser.flushInput()
