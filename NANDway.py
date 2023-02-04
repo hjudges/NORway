@@ -176,6 +176,11 @@ class NANDFlasher(TeensySerial):
 			self.close()
 			sys.exit(1)
 
+		if self.MF_ID == 0x98 and self.DEVICE_ID == 0xdc:
+			# TC58NVG2S3E
+			self.NAND_NBLOCKS = self.NAND_NBLOCKS // 4
+			self.NAND_PLANE_SZ = self.NAND_PLANE_SZ // 4
+
 		self.NAND_PAGES_PER_BLOCK = self.NAND_BLOCK_SZ / self.NAND_PAGE_SZ
 		self.NAND_PAGE_SZ_PLUS_RAS = self.NAND_PAGE_SZ + self.NAND_RAS
 		self.NAND_NPAGES = self.NAND_PAGES_PER_BLOCK * self.NAND_NBLOCKS
@@ -210,6 +215,12 @@ class NANDFlasher(TeensySerial):
 				print "NAND chip type:         HY27UF082G2B (0x%02x)"%self.DEVICE_ID
 			elif self.DEVICE_ID == 0xDC:
 				print "NAND chip type:         H27U4G8F2D (0x%02x)"%self.DEVICE_ID
+			else:
+				print "NAND chip type:         unknown (0x%02x)"%self.DEVICE_ID
+		elif self.MF_ID == 0x98:
+			print "NAND chip manufacturer: Toshiba (0x%02x)"%self.MF_ID
+			if self.DEVICE_ID == 0xdc:
+				print "NAND chip type:         TC58NVG2S3E (0x%02x)"%self.DEVICE_ID
 			else:
 				print "NAND chip type:         unknown (0x%02x)"%self.DEVICE_ID
 		else:
@@ -427,7 +438,7 @@ def ps3_validate_block(block_data, page_plus_ras_sz, page_sz, blocknr):
 
 if __name__ == "__main__":
 	VERSION_MAJOR = 0
-	VERSION_MINOR = 65
+	VERSION_MINOR = 66
 
 	print "NANDway v%d.%02d - Teensy++ 2.0 NAND Flasher for PS3/Xbox/Wii"%(VERSION_MAJOR, VERSION_MINOR)
 	print "(Original NORway.py by judges <judges@eEcho.com>)"
