@@ -18,3 +18,6 @@ Coming soon...
 | Pico 2                                                        |
 | &nbsp;&nbsp;RP235xA | 26        | No     | **Yes** | No     | **Yes**   |
 | &nbsp;&nbsp;RP235xB | 48        | **Yes**| **Yes** | **Yes**| **Yes**   |
+
+# TODOs
+- Improve build to create a universal binary for Pico 1 and 2 (NANDway SBE and SPIway)
