@@ -37,4 +37,4 @@ NANDway/Signal Booster Edition/NANDway_SignalBoosterEdition.srec
 *.xcf
 .DS_Store
 *.lprof
-rp2350b/build
+pico/build
