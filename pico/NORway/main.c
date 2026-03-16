@@ -24,17 +24,17 @@ see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 /* GPIO 0 through 22 are reserved for address lines */
 #define ADDRESS_PIN_MASK    (0x7FFFFFull)
 
-/* GPIO 23 though 39 are reserved for data lines */
+/* GPIO 23 though 38 are reserved for data lines */
 #define DATA_PIN_SHIFT      (23)
-#define DATA_PIN_MASK       (0x3FFFC00000ull)
+#define DATA_PIN_MASK       (0x7FFF800000ull)
 
-/* GPIO 40 through 45 are for control lines */
-#define RYBY_PIN            (40)
-#define TRISTATE_PIN        (41)
-#define CE_PIN              (42)
-#define WE_PIN              (43)
-#define OE_PIN              (44)
-#define RESET_PIN           (45)
+/* GPIO 39 through 44 are for control lines */
+#define RYBY_PIN            (39)
+#define TRISTATE_PIN        (40)
+#define CE_PIN              (41)
+#define WE_PIN              (42)
+#define OE_PIN              (43)
+#define RESET_PIN           (44)
 
 #define RYBY_PIN_MASK       (1ull << RYBY_PIN)
 #define TRISTATE_PIN_MASK   (1ull << TRISTATE_PIN)
@@ -54,7 +54,7 @@ see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
                              DATA_PIN_MASK | \
                              CONTROL_PIN_MASK)
 
-#define NUM_PINS            (46)
+#define NUM_PINS            (45)
 
 
 enum fsm_states_e {
@@ -140,6 +140,10 @@ void init_pins(void)
     /* Control pins except RYBY are output */
     gpio_set_dir_out_masked64(CONTROL_PIN_MASK & (~RYBY_PIN_MASK));
     gpio_set_dir_in_masked64(RYBY_PIN_MASK);
+
+    /* Set default state for control pins */
+    gpio_set_mask64(WE_PIN_MASK | OE_PIN_MASK | RESET_PIN_MASK);
+    gpio_clr_mask64(TRISTATE_PIN_MASK | CE_PIN_MASK);
 }
 
 
@@ -148,14 +152,66 @@ void init_pins(void)
  */
 void release_pins(void)
 {
-    uint32_t i;
-
     gpio_set_dir_in_masked64(ALL_PIN_MASK);
+    gpio_clr_mask64(ALL_PIN_MASK);
 
-    /* Disable pull up/down resistors on the pins */
-    for (i = 0; i < NUM_PINS; i++) {
-        gpio_set_pulls(i, false, false);
-    }
+    /* Set all pins to high-impedance (Z) */
+    gpio_set_function_masked64(ALL_PIN_MASK, GPIO_FUNC_NULL);
+}
+
+
+/* Helpers for single pins */
+void CE_LOW(void)
+{
+    gpio_clr_mask64(CE_PIN_MASK);
+}
+
+
+void CE_HIGH(void)
+{
+    gpio_set_mask64(CE_PIN_MASK);
+}
+
+
+void OE_LOW(void)
+{
+    gpio_clr_mask64(OE_PIN_MASK);
+}
+
+
+void OE_HIGH(void)
+{
+    gpio_set_mask64(OE_PIN_MASK);
+}
+
+
+void RESET_LOW(void)
+{
+    gpio_clr_mask64(RESET_PIN_MASK);
+}
+
+
+void RESET_HIGH(void)
+{
+    gpio_set_mask64(RESET_PIN_MASK);
+}
+
+
+void WE_LOW(void)
+{
+    gpio_clr_mask64(WE_PIN_MASK);
+}
+
+
+void WE_HIGH(void)
+{
+    gpio_set_mask64(WE_PIN_MASK);
+}
+
+
+bool get_RYBY(void)
+{
+    return gpio_get(RYBY_PIN);
 }
 
 
@@ -172,6 +228,9 @@ void put_data_u16(uint16_t data_to_output)
     gpio_put_masked64(
         DATA_PIN_MASK,
         (uint64_t)data_to_output << DATA_PIN_SHIFT);
+    DELAY_40_NS();
+    WE_LOW();
+    WE_HIGH();
 }
 
 
@@ -240,61 +299,6 @@ void address_increment_and_update_pins(void)
 {
     s_address++;
     update_address_pins();
-}
-
-
-/* Helpers for single pins */
-void CE_LOW(void)
-{
-    gpio_clr_mask64(CE_PIN_MASK);
-}
-
-
-void CE_HIGH(void)
-{
-    gpio_set_mask64(CE_PIN_MASK);
-}
-
-
-void OE_LOW(void)
-{
-    gpio_clr_mask64(OE_PIN_MASK);
-}
-
-
-void OE_HIGH(void)
-{
-    gpio_set_mask64(OE_PIN_MASK);
-}
-
-
-void RESET_LOW(void)
-{
-    gpio_clr_mask64(RESET_PIN_MASK);
-}
-
-
-void RESET_HIGH(void)
-{
-    gpio_set_mask64(RESET_PIN_MASK);
-}
-
-
-void WE_LOW(void)
-{
-    gpio_clr_mask64(WE_PIN_MASK);
-}
-
-
-void WE_HIGH(void)
-{
-    gpio_set_mask64(WE_PIN_MASK);
-}
-
-
-bool get_RYBY(void)
-{
-    return gpio_get(RYBY_PIN);
 }
 
 
@@ -450,13 +454,11 @@ enum fsm_states_e run_idle_state(void)
         case CMD_WRITE:
             OE_HIGH();
             CE_LOW();
-            WE_LOW();
             next_state = S_WRITE;
             break;
         case CMD_WRITE_INCREMENT:
             OE_HIGH();
             CE_LOW();
-            WE_LOW();
             next_state = S_WRITE_INCREMENT;
             break;
         case CMD_WRITEWORD:
@@ -479,6 +481,16 @@ enum fsm_states_e run_idle_state(void)
             CE_LOW();
             next_state = S_WRITEWORD_WBP_2NDDIE;
             break;
+        case CMD_WRITEWORD_WBP:
+            OE_HIGH();
+            CE_LOW();
+            next_state = S_WRITEWORD_WBP;
+            break;
+        case CMD_WRITEWORD_WBP_2NDDIE:
+            OE_HIGH();
+            CE_LOW();
+            next_state = S_WRITEWORD_WBP_2NDDIE;
+            break;
         default:
             /*
              * This is for commands that pack an argument into
@@ -488,7 +500,7 @@ enum fsm_states_e run_idle_state(void)
                 /*
                  * Address - Receive address byte 3
                  */
-                update_address3((rc << 1) >> 1);
+                update_address3(rc & 0x7f);
                 next_state = S_ADDR2;
             } else if ((rc >> 6) == 1) {
                 /*
@@ -496,7 +508,7 @@ enum fsm_states_e run_idle_state(void)
                  * through the main FSM loop for as many iterations
                  * as sent. For the pico, 1 "cycle" == 1us.
                  */
-                sleep_us(rc & 0x3f);
+                sleep_us(((uint8_t)rc) & 0x3f);
             }
             break;
         }
@@ -518,7 +530,7 @@ enum fsm_states_e run_reading_state(enum fsm_states_e current_state)
         data_pins = get_data_pins();
         OE_HIGH();
 
-        usb_serial_putchar((char)(data_pins & 0xff00 >> 8));
+        usb_serial_putchar((char)((data_pins & 0xff00) >> 8));
         usb_serial_putchar((char)(data_pins & 0xff));
     } else {
         uint32_t bss_size;
@@ -543,7 +555,7 @@ enum fsm_states_e run_reading_state(enum fsm_states_e current_state)
             DELAY_100_NS();
 
             data_pins = get_data_pins();
-            buf_read[buf_ix++] = data_pins & 0xff00 >> 8;
+            buf_read[buf_ix++] = (data_pins & 0xff00) >> 8;
             buf_read[buf_ix++] = data_pins & 0xff;
             OE_HIGH();
 
@@ -587,6 +599,7 @@ enum fsm_states_e run_addr3_state(enum fsm_states_e current_state)
 
     if (rc != PICO_ERROR_TIMEOUT) {
         update_address1(rc);
+        update_address_pins();
     } else {
         next_state = S_ADDR3;
     }
@@ -615,8 +628,7 @@ enum fsm_states_e run_write_state(enum fsm_states_e current_state)
         }
     } while (rc == PICO_ERROR_TIMEOUT);
 
-    DELAY_100_NS();
-    WE_HIGH();
+    put_data_u16(data_word);
 
     if (current_state == S_WRITE_INCREMENT) {
         address_increment_and_update_pins();
@@ -649,10 +661,10 @@ bool wait_for_ryby_during_write(void)
 {
     DELAY_200_NS();
 
-    uint32_t cnt = 0xFFFFFF; /* ~17s on teensy, hopefully long enough on pico */
+    uint32_t cnt = 0xFFFFFFF; /* ~17s on teensy, hopefully long enough on pico */
     do {
         cnt--;
-    } while(!get_RYBY() || cnt > 0);
+    } while(!get_RYBY() && cnt > 0);
 
     return (cnt == 0);
 }

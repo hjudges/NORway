@@ -3,10 +3,12 @@
 
 #include "pico/stdlib.h"
 
-/* 8ns per tick -> 13 ticks for 104ns delay */
-#define DELAY_100_NS()  (systick_delay(13))
-/* 8ns per tick -> 25 ticks for 200ns delay */
-#define DELAY_200_NS()  (systick_delay(25))
+/* 6.66ns per tick -> 6 ticks for 40ns delay */
+#define DELAY_40_NS()  (systick_delay(6))
+/* 6.66ns per tick -> 15 ticks for 100ns delay */
+#define DELAY_100_NS()  (systick_delay(15))
+/* 6.66ns per tick -> 25 ticks for 200ns delay */
+#define DELAY_200_NS()  (systick_delay(30))
 
 /**
  * Initializes the systick timer
@@ -15,7 +17,7 @@ void systick_timer_init(void);
 
 /**
  * Delays the CPU for the number of ticks specified.
- * The default CPU speed is 125MHz (8ns/clock cycle).
+ * The default CPU speed is 150MHz (6.66ns/clock cycle).
  */
 void systick_delay(uint16_t ticks);
 
