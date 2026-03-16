@@ -513,7 +513,7 @@ class NORFlasher(TeensySerial):
 							error_msg = "Verification error!"
 						else:
 							self.close()
-							raise NORError("Received unknown error! (Got 0x%02x)"%val)
+							raise NORError("Received unknown error! (Got 0x%02x)"%res)
 
 						self.reset = 1
 						self.udelay(40)
@@ -548,7 +548,7 @@ class NORFlasher(TeensySerial):
 		ssize = self.getsectorsize(addr)
 		while len(data) >= ssize:
 			print("\r%d KB / %d KB"%((addr-start)//1024, datasize//1024), end="", flush=True)
-			self.program(addr/2, data[:ssize], wordmode, ubm, noverify)
+			self.program(addr//2, data[:ssize], wordmode, ubm, noverify)
 			addr += ssize
 			data = data[ssize:]
 			ssize = self.getsectorsize(addr)
