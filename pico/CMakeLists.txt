@@ -4,6 +4,10 @@ cmake_minimum_required(VERSION 3.13)
 # (note this can come from environment, CMake cache etc)
 set(PICO_SDK_FETCH_FROM_GIT on)
 
+message(STATUS "Importing additional boards from ${CMAKE_SOURCE_DIR}")
+set(PICO_BOARD_HEADER_DIRS ${CMAKE_SOURCE_DIR}/boards)
+set(PICO_BOARD pico2b)
+
 # pico_sdk_import.cmake is a single file copied from this SDK
 # note: this must happen before project()
 include(pico_sdk_import.cmake)
