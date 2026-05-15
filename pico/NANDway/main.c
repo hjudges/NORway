@@ -385,11 +385,23 @@ void nand_re_high(nand_port *nandp)
 }
 
 
+void nand_toggle_we(nand_port *nandp)
+{
+    gpio_put_masked64(
+        nandp->control_we_pin_mask,
+        0);
+    gpio_put_masked64(
+        nandp->control_we_pin_mask,
+        (uint64_t)0xFF << nandp->control_we_pin_shift);
+}
+
+
 void nand_io_set(nand_port *nandp, char data)
 {
     gpio_put_masked64(
         nandp->io_port_pin_mask,
         (uint64_t)data << nandp->io_port_pin_shift);
+    nand_toggle_we(nandp);
 }
 
 
@@ -457,17 +469,6 @@ void nand_enable(nand_port *nandp)
 #endif
 
     nand_io_output(nandp); // io set as output
-}
-
-
-void nand_toggle_we(nand_port *nandp)
-{
-    gpio_put_masked64(
-        nandp->control_we_pin_mask,
-        0);
-    gpio_put_masked64(
-        nandp->control_we_pin_mask,
-        (uint64_t)0xFF << nandp->control_we_pin_shift);
 }
 
 
@@ -859,12 +860,12 @@ uint8_t nand_status(nand_port *nandp) {
 }
 
 
-void nand_busy_wait(nand_port *nandp)
+void nand_busy_wait(nand_port *nandp, uint16_t delay_ms)
 {
     uint8_t status;
 
     do {
-        sleep_us(5);
+        sleep_us(delay_ms);
         status = nand_status(nandp);
     } while (!(status & NAND_STATUS_READY));
 }
@@ -924,7 +925,7 @@ int nand_write_page(nand_port *nandp, char *buf_addr) {
 
     /* wait for the internal controller to finish the program command
         TBD - up to 200us */
-    nand_busy_wait(nandp);
+    nand_busy_wait(nandp, 5);
 
     return !(nand_status(nandp) & NAND_STATUS_FAIL);
 }
@@ -988,7 +989,7 @@ int nand_erase_block(nand_port *nandp, char *buf_addr) {
 
     /* wait for the internal controller to finish the erase command
         TBD - up to 2ms */
-    nand_busy_wait(nandp);
+    nand_busy_wait(nandp, 20);
 
     return !(nand_status(nandp) & NAND_STATUS_FAIL);
 }
@@ -1026,7 +1027,7 @@ void handle_erase_block(nand_port *nand) {
 
 void run_commands(void)
 {
-    int                 rc;
+    int rc;
 
     rc = usb_serial_getchar();
 
