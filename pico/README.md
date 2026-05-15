@@ -1,5 +1,5 @@
 # NORway for the RPi Pico RP2350B
-This is a port of NORway (and eventually NANDway/SPIway) for the RPi Pico.
+This is a port of NORway (and eventually NANDway Dual NAND/SPIway) for the RPi Pico.
 
 # Build Dependencies
 ## Debian/Ubuntu
@@ -54,6 +54,38 @@ Writing to flash was tested after performing a chip erase before each test.
 Let me know if you try these boards and I'll update the README.
 
 # Pin Mapping
+## NANDway
+### Signal Booster Edition
+| RPi Pin | NANDway SBE Signal |
+| ------- | ------------------ |
+| GPIO0   | WPal               |
+| GPIO1   | RYBY               |
+| GPIO2   | ALE                |
+| GPIO3   | ALE                |
+| GPIO4   | ALE                |
+| GPIO5   | ALE                |
+| GPIO6   | RE                 |
+| GPIO7   | RE                 |
+| GPIO8   | RE                 |
+| GPIO9   | RE                 |
+| GPIO10  | CLE                |
+| GPIO11  | CLE                |
+| GPIO12  | CLE                |
+| GPIO13  | CLE                |
+| GPIO14  | IO0                |
+| GPIO15  | IO1                |
+| GPIO16  | IO2                |
+| GPIO17  | IO3                |
+| GPIO18  | IO4                |
+| GPIO19  | IO5                |
+| GPIO20  | IO6                |
+| GPIO21  | IO7                |
+| GPIO22  | WE                 |
+| GPIO23  | WE                 |
+| GPIO24  | WE                 |
+| GPIO25  | WE                 |
+
+
 ## NORway
 Any RP235xB chip/board should be usable as long as all the GPIO pins are broken out. It **MUST** be a "B" revision chip as only that one has enough GPIO pins.
 
