@@ -142,7 +142,7 @@ typedef struct _nand_info {
     #define CONTROL_RE_PIN_MASK     (0x0Full << CONTROL_RE_PIN_SHIFT)
     #define CONTROL_RE_PIN_COUNT    (4)
 
-    #define CONTROL_WE_PIN_SHIFT    (20)
+    #define CONTROL_WE_PIN_SHIFT    (22)
     #define CONTROL_WE_PIN_MASK     (0x0Full << CONTROL_WE_PIN_SHIFT)
     #define CONTROL_WE_PIN_COUNT    (4)
 
