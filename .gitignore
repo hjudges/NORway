@@ -38,3 +38,4 @@ NANDway/Signal Booster Edition/NANDway_SignalBoosterEdition.srec
 .DS_Store
 *.lprof
 pico/build
+*.bin
