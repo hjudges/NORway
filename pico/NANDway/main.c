@@ -390,6 +390,7 @@ void nand_toggle_we(nand_port *nandp)
     gpio_put_masked64(
         nandp->control_we_pin_mask,
         0);
+    DELAY_40_NS();
     gpio_put_masked64(
         nandp->control_we_pin_mask,
         (uint64_t)0xFF << nandp->control_we_pin_shift);
@@ -401,6 +402,7 @@ void nand_io_set(nand_port *nandp, char data)
     gpio_put_masked64(
         nandp->io_port_pin_mask,
         (uint64_t)data << nandp->io_port_pin_shift);
+    DELAY_40_NS();
     nand_toggle_we(nandp);
 }
 
@@ -477,9 +479,11 @@ void nand_command(nand_port *nandp, uint8_t command)
     gpio_put_masked64(
         nandp->io_port_pin_mask,
         (uint64_t)command << nandp->io_port_pin_shift);
+    DELAY_40_NS();
     gpio_put_masked64(
         nandp->control_cle_pin_mask,
         (uint64_t)0xFF << nandp->control_cle_pin_shift);
+    DELAY_40_NS();
 
     nand_toggle_we(nandp);
 
