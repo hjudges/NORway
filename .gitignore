@@ -20,6 +20,7 @@ NORway/default/NORway.o
 NORway/default/usb_serial.d
 NORway/default/usb_serial.o
 NORway/NORway.atsuo
+NORway_rp2350b/build
 TcfTransactionLog.csv
 SPIway/Release/makedep.mk
 SPIway/Release/Makefile
@@ -33,3 +34,8 @@ SPIway/SPIway.atsuo
 NANDway/Dual NAND Edition/NANDway_DualNANDEdition.srec
 NANDway/Signal Booster Edition/NANDway_SignalBoosterEdition.srec
 /SPIway/Release/SPIway.srec
+*.xcf
+.DS_Store
+*.lprof
+pico/build
+*.bin
